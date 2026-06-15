@@ -58,6 +58,10 @@ The production build still uses `prisma db push`, so deployment should add the `
 
 After deployment, run production smoke. Expected result should include `/api/audit-logs=401` for unauthenticated access and `200` for authenticated admin module reads after login-time permission sync.
 
+## Deployment Retry Note
+
+The first GitHub CI run passed, but Vercel did not create a production deployment for that commit immediately. A follow-up release-note-only commit can be used to trigger the Git integration again.
+
 ## Blockers
 
 None in source code.
