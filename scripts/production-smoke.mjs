@@ -45,6 +45,29 @@ function hasUnsafeKeys(value) {
   );
 }
 
+function isNullableNumber(value) {
+  return value === null || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isNumberObject(value, keys) {
+  if (value === null) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return keys.every((key) => typeof value[key] === "number" && Number.isFinite(value[key]));
+}
+
+function hasSafeSummaryShape(body) {
+  const summary = body?.summary;
+  if (!summary || typeof summary !== "object" || Array.isArray(summary)) return false;
+
+  return (
+    isNullableNumber(summary.users) &&
+    isNumberObject(summary.products, ["active", "lowStock"]) &&
+    isNumberObject(summary.sales, ["draft", "confirmed"]) &&
+    isNumberObject(summary.procurement, ["draft", "ordered"]) &&
+    isNumberObject(summary.finance, ["activeAccounts", "openReceivables", "openPayables"])
+  );
+}
+
 async function main() {
   const publicPages = await Promise.all(["/", "/login", "/register"].map(page));
   add("public pages render", publicPages.every((item) => item.status === 200), { publicPages });
@@ -87,6 +110,19 @@ async function main() {
         status: me.response.status,
         unsafe: hasUnsafeKeys(me.body),
       });
+
+      const dashboardSummary = await request("/api/dashboard/summary", { headers: authHeaders });
+      add(
+        "dashboard summary has safe operational shape",
+        dashboardSummary.response.status === 200 &&
+          hasSafeSummaryShape(dashboardSummary.body) &&
+          !hasUnsafeKeys(dashboardSummary.body),
+        {
+          status: dashboardSummary.response.status,
+          unsafe: hasUnsafeKeys(dashboardSummary.body),
+          keys: dashboardSummary.body?.summary ? Object.keys(dashboardSummary.body.summary) : [],
+        },
+      );
 
       const moduleApis = await Promise.all(
         protectedApiPaths
