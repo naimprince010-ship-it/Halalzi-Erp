@@ -5,6 +5,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
 
+type DashboardSummary = {
+  users: number | null;
+  products: { active: number; lowStock: number } | null;
+  sales: { draft: number; confirmed: number } | null;
+  procurement: { draft: number; ordered: number } | null;
+  finance: { activeAccounts: number; openReceivables: number; openPayables: number } | null;
+};
+
+type DashboardSummaryResponse = {
+  summary?: DashboardSummary;
+  error?: { message?: string };
+};
+
 const navItems = [
   { label: "Dashboard", permission: "dashboard.read", href: "/dashboard" },
   { label: "Company", permission: "company.read", href: "/dashboard/company" },
@@ -17,10 +30,27 @@ const navItems = [
   { label: "Profile", permission: "profile.read", href: "/dashboard/profile" },
 ];
 
+function numberValue(value: number | null | undefined) {
+  if (typeof value !== "number") return "-";
+  return value.toLocaleString();
+}
+
+function money(value: number | null | undefined) {
+  if (typeof value !== "number") return "-";
+  return value.toLocaleString(undefined, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function DashboardClient() {
   const router = useRouter();
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(null);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,6 +85,45 @@ export function DashboardClient() {
     }
 
     return navItems.filter((item) => currentUser.permissions.includes(item.permission));
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser?.permissions.includes("dashboard.read")) {
+      return;
+    }
+
+    let active = true;
+
+    async function loadSummary() {
+      setSummaryLoading(true);
+
+      try {
+        const response = await fetch("/api/dashboard/summary", { cache: "no-store" });
+        const payload = (await response.json().catch(() => ({}))) as DashboardSummaryResponse;
+
+        if (!response.ok) {
+          throw new Error(payload.error?.message ?? "Could not load dashboard summary.");
+        }
+
+        if (active) {
+          setSummary(payload.summary ?? null);
+        }
+      } catch (caught) {
+        if (active) {
+          setError(caught instanceof Error ? caught.message : "Could not load dashboard summary.");
+        }
+      } finally {
+        if (active) {
+          setSummaryLoading(false);
+        }
+      }
+    }
+
+    void loadSummary();
+
+    return () => {
+      active = false;
+    };
   }, [currentUser]);
 
   async function handleLogout() {
@@ -129,10 +198,10 @@ export function DashboardClient() {
         <section className="dashboard-hero">
           <div>
             <p className="eyebrow">Dashboard</p>
-            <h2>Company workspace overview</h2>
+            <h2>Operational workspace overview</h2>
             <p>
-              Auth, tenant context, and admin permissions are active. Next modules can now build
-              on this foundation.
+              Track the current state of users, products, sales, procurement, and finance from one
+              tenant-scoped command center.
             </p>
           </div>
         </section>
@@ -148,6 +217,40 @@ export function DashboardClient() {
           <article className="stat-tile">
             <span>Permissions</span>
             <strong>{currentUser.permissions.length}</strong>
+          </article>
+        </section>
+        <section className="operations-overview" aria-label="Operational summary">
+          <article className="overview-card">
+            <span>Users</span>
+            <strong>{summaryLoading ? "Loading..." : numberValue(summary?.users)}</strong>
+            <small>Company users visible to your role</small>
+          </article>
+          <article className="overview-card">
+            <span>Products</span>
+            <strong>{summaryLoading ? "Loading..." : numberValue(summary?.products?.active)}</strong>
+            <small>{summary?.products ? `${summary.products.lowStock} low stock` : "Requires products.read"}</small>
+          </article>
+          <article className="overview-card">
+            <span>Sales</span>
+            <strong>{summaryLoading ? "Loading..." : `${numberValue(summary?.sales?.draft)} draft`}</strong>
+            <small>{summary?.sales ? `${summary.sales.confirmed} confirmed` : "Requires sales.read"}</small>
+          </article>
+          <article className="overview-card">
+            <span>Procurement</span>
+            <strong>{summaryLoading ? "Loading..." : `${numberValue(summary?.procurement?.draft)} draft`}</strong>
+            <small>
+              {summary?.procurement ? `${summary.procurement.ordered} ordered` : "Requires purchases.read"}
+            </small>
+          </article>
+          <article className="overview-card overview-card-wide">
+            <span>Open receivables</span>
+            <strong>{summaryLoading ? "Loading..." : money(summary?.finance?.openReceivables)}</strong>
+            <small>{summary?.finance ? `${summary.finance.activeAccounts} active accounts` : "Requires finance.read"}</small>
+          </article>
+          <article className="overview-card overview-card-wide">
+            <span>Open payables</span>
+            <strong>{summaryLoading ? "Loading..." : money(summary?.finance?.openPayables)}</strong>
+            <small>Outstanding supplier payments</small>
           </article>
         </section>
         <section className="module-section">

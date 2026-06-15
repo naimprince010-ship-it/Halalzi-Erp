@@ -51,6 +51,7 @@ async function main() {
 
   const protectedApiPaths = [
     "/api/auth/me",
+    "/api/dashboard/summary",
     "/api/users",
     "/api/roles",
     "/api/products",

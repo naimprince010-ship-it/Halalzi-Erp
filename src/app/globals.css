@@ -380,6 +380,43 @@ button {
   margin-top: 24px;
 }
 
+.operations-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.overview-card {
+  min-height: 118px;
+  display: grid;
+  align-content: space-between;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.overview-card span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.overview-card strong {
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+
+.overview-card small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.overview-card-wide {
+  grid-column: span 2;
+}
+
 .module-section h2 {
   font-size: 18px;
   margin-bottom: 12px;
@@ -754,7 +791,8 @@ button {
 
   .dashboard-grid,
   .module-grid,
-  .company-details-grid {
+  .company-details-grid,
+  .operations-overview {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -786,6 +824,10 @@ button {
   .detail-card-wide {
     grid-column: span 2;
   }
+
+  .overview-card-wide {
+    grid-column: span 1;
+  }
 }
 
 @media (max-width: 560px) {
@@ -813,7 +855,8 @@ button {
 
   .dashboard-grid,
   .module-grid,
-  .company-details-grid {
+  .company-details-grid,
+  .operations-overview {
     grid-template-columns: 1fr;
   }
 
