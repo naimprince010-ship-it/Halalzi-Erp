@@ -10,11 +10,13 @@
     "lint": "eslint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "smoke:prod": "node scripts/production-smoke.mjs",
     "check:env": "node scripts/check-production-env.mjs",
-    "check": "npm run lint && npm run build"
+    "build:migrate": "prisma generate && prisma migrate deploy && next build",
+    "check": "npm run lint && npm run build:ci"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

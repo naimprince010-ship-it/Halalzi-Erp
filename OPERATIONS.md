@@ -91,5 +91,5 @@ For login/API/database errors:
 - Add audit log model and mutation logging.
 - Add password reset/email verification.
 - Add role permission edit screen.
-- Replace build-time `prisma db push` with migration deploy once schema stabilizes.
+- Follow `MIGRATIONS.md` to baseline production, then replace build-time `prisma db push` with migration deploy once schema stabilizes.
 - Add authenticated preview smoke tests after a safe preview database strategy exists.
