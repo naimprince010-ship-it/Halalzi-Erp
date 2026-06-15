@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
+    "prisma:baseline:production": "node scripts/resolve-production-baseline.mjs",
     "prisma:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "smoke:prod": "node scripts/production-smoke.mjs",

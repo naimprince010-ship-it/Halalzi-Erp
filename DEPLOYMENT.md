@@ -56,7 +56,7 @@ For local env checking, `npm run check:env` may warn about localhost. That is ex
 npx prisma db push
 ```
 
-For later stable production releases, use migrations. See `MIGRATIONS.md` before switching production because the current Neon database was first created with `prisma db push`.
+For later stable production releases, use migrations. See `MIGRATIONS.md` and the guarded helper command `npm run prisma:baseline:production -- --apply` before switching production because the current Neon database was first created with `prisma db push`.
 
 ```powershell
 npx prisma migrate deploy
@@ -106,6 +106,6 @@ Before sharing the app with real clients:
 3. Confirm Neon backup/restore settings and export process.
 4. Enable Vercel runtime monitoring and review error logs weekly.
 5. Add rate limiting to auth and write APIs.
-6. Follow `MIGRATIONS.md` to baseline production and replace `prisma db push` with `prisma migrate deploy` once schema is no longer changing daily.
+6. Follow `MIGRATIONS.md` to baseline production with `npm run prisma:baseline:production -- --apply`, then replace `prisma db push` with `prisma migrate deploy` once schema is no longer changing daily.
 7. Add audit logging for user, role, inventory, sales, procurement, and finance mutations.
 8. Document client onboarding/offboarding steps.

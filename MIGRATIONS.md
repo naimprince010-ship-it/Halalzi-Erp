@@ -26,6 +26,29 @@ Then verify:
 npx prisma migrate status
 ```
 
+Or use the guarded helper command:
+
+```powershell
+npm run prisma:baseline:production -- --apply
+```
+
+The helper refuses to run unless `DATABASE_URL` is present and `--apply` is passed.
+It can load `.env.production.local` automatically, or you can pass a specific env file:
+
+```powershell
+npm run prisma:baseline:production -- --apply --env-file=.env.production.local
+```
+
+If using Vercel production environment variables locally, first authenticate the Vercel CLI and pull the production env into a temporary local file:
+
+```powershell
+vercel login
+vercel link
+vercel env pull .env.production.local --environment=production
+```
+
+Then run the helper from a shell where `DATABASE_URL` points to the production Neon database. Do not commit `.env.production.local`.
+
 ## Switch Vercel To Migration Deploy
 After the baseline is marked applied:
 
