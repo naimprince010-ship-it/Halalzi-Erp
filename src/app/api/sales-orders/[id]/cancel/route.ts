@@ -1,0 +1,80 @@
+import { NextResponse } from "next/server";
+import { AppError, errorResponse } from "@/lib/auth/auth-errors";
+import { prisma } from "@/lib/db/prisma";
+import { requirePermission } from "@/lib/rbac/guards";
+import { companyScope } from "@/lib/rbac/tenant-scope";
+import { safeSalesOrderSelect } from "../../_shared";
+
+function notFoundError() {
+  return new AppError("FORBIDDEN", "You do not have permission to access this sales order.", 403);
+}
+
+export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const currentUser = await requirePermission("sales.cancel");
+    const scope = companyScope(currentUser);
+    const { id } = await context.params;
+
+    const cancelled = await prisma.$transaction(async (tx) => {
+      const order = await tx.salesOrder.findFirst({
+        where: {
+          id,
+          companyId: scope.companyId,
+        },
+        select: {
+          id: true,
+          status: true,
+          items: {
+            select: {
+              productId: true,
+              quantity: true,
+            },
+          },
+        },
+      });
+
+      if (!order) {
+        throw notFoundError();
+      }
+
+      if (order.status === "cancelled") {
+        throw new AppError("VALIDATION_ERROR", "Sales order is already cancelled.", 400);
+      }
+
+      if (order.status !== "draft" && order.status !== "confirmed") {
+        throw new AppError("VALIDATION_ERROR", "Only draft or confirmed sales orders can be cancelled.", 400);
+      }
+
+      if (order.status === "confirmed") {
+        for (const item of order.items) {
+          const updated = await tx.product.updateMany({
+            where: {
+              id: item.productId,
+              companyId: scope.companyId,
+            },
+            data: {
+              stockQuantity: { increment: item.quantity },
+            },
+          });
+
+          if (updated.count !== 1) {
+            throw new AppError("VALIDATION_ERROR", "Unable to restore stock for cancelled order.", 400);
+          }
+        }
+      }
+
+      return tx.salesOrder.update({
+        where: { id },
+        data: {
+          status: "cancelled",
+          cancelledAt: new Date(),
+        },
+        select: safeSalesOrderSelect,
+      });
+    });
+
+    return NextResponse.json({ data: cancelled });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
