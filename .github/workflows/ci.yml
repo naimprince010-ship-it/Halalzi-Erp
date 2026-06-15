@@ -16,7 +16,6 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/halalzi_ci?schema=public
-      NODE_ENV: production
 
     steps:
       - name: Checkout
@@ -29,7 +28,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Validate Prisma schema
         run: npx prisma validate
