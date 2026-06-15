@@ -76,6 +76,7 @@ export const DEFAULT_PERMISSIONS = [
     action: "payables.update",
     description: "Update payables",
   },
+  { key: "audit.read", module: "audit", action: "read", description: "View company activity log" },
 ] as const;
 
 export type PermissionKey = (typeof DEFAULT_PERMISSIONS)[number]["key"];

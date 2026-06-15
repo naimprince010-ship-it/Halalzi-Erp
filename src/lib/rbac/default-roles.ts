@@ -68,6 +68,7 @@ const ADMIN_PERMISSIONS: PermissionKey[] = [
   "finance.journals.cancel",
   "finance.receivables.update",
   "finance.payables.update",
+  "audit.read",
 ];
 
 const STAFF_PERMISSIONS: PermissionKey[] = [

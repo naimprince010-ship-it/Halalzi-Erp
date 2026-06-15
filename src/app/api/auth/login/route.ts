@@ -5,6 +5,41 @@ import { toCurrentUserPayload } from "@/lib/auth/current-user";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
+import { createDefaultCompanyRoles } from "@/lib/rbac/default-roles";
+
+const userLoginSelect = {
+  id: true,
+  name: true,
+  email: true,
+  passwordHash: true,
+  status: true,
+  company: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      status: true,
+    },
+  },
+  userRoles: {
+    select: {
+      role: {
+        select: {
+          key: true,
+          rolePermissions: {
+            select: {
+              permission: {
+                select: {
+                  key: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
 
 export async function POST(request: Request) {
   try {
@@ -12,39 +47,7 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email: input.email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        passwordHash: true,
-        status: true,
-        company: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            status: true,
-          },
-        },
-        userRoles: {
-          select: {
-            role: {
-              select: {
-                key: true,
-                rolePermissions: {
-                  select: {
-                    permission: {
-                      select: {
-                        key: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      select: userLoginSelect,
     });
 
     if (!user) {
@@ -65,15 +68,22 @@ export async function POST(request: Request) {
       throw companySuspended();
     }
 
+    await createDefaultCompanyRoles(prisma, user.company.id);
+
+    const refreshedUser = await prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: userLoginSelect,
+    });
+
     const session = await createSession(user.id, input.rememberMe);
     const response = NextResponse.json(
       toCurrentUserPayload({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        status: user.status,
-        company: user.company,
-        userRoles: user.userRoles,
+        id: refreshedUser.id,
+        name: refreshedUser.name,
+        email: refreshedUser.email,
+        status: refreshedUser.status,
+        company: refreshedUser.company,
+        userRoles: refreshedUser.userRoles,
       }),
     );
     setSessionCookie(response, session.token, session.maxAge);

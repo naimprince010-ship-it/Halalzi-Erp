@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -60,6 +60,7 @@ const navItems = [
   { label: "Sales", permission: "sales.read", href: "/dashboard/sales" },
   { label: "Procurement", permission: "purchases.read", href: "/dashboard/procurement" },
   { label: "Finance", permission: "finance.read", href: "/dashboard/finance" },
+  { label: "Audit", permission: "audit.read", href: "/dashboard/audit" },
   { label: "Users", permission: "users.read", href: "/dashboard/users" },
   { label: "Roles", permission: "roles.read", href: "/dashboard/roles" },
   { label: "Profile", permission: "profile.read", href: "/dashboard/profile" },
@@ -139,7 +140,7 @@ export default function UsersDashboardPage() {
         setAvailableRoles(payload.roles ?? []);
       }
     } catch {
-      // silently ignore â€” role selector will be empty
+      // silently ignore — role selector will be empty
     }
   }
 
@@ -591,7 +592,7 @@ export default function UsersDashboardPage() {
                                 }))
                               }
                             >
-                              <option value="">Change roleâ€¦</option>
+                              <option value="">Change role…</option>
                               {availableRoles.map((r) => (
                                 <option key={r.id} value={r.id}>
                                   {r.name}
@@ -614,7 +615,7 @@ export default function UsersDashboardPage() {
                                 if (rid) handleRoleChange(user, rid);
                               }}
                             >
-                              {assigningRoleUserId === user.id ? "Assigningâ€¦" : "Assign"}
+                              {assigningRoleUserId === user.id ? "Assigning…" : "Assign"}
                             </button>
                           </>
                         ) : null}
@@ -678,4 +679,5 @@ export default function UsersDashboardPage() {
     </main>
   );
 }
+
 

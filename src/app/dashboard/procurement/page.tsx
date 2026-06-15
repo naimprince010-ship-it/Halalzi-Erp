@@ -77,6 +77,7 @@ const navItems = [
   { label: "Sales", permission: "sales.read", href: "/dashboard/sales" },
   { label: "Procurement", permission: "purchases.read", href: "/dashboard/procurement" },
   { label: "Finance", permission: "finance.read", href: "/dashboard/finance" },
+  { label: "Audit", permission: "audit.read", href: "/dashboard/audit" },
   { label: "Users", permission: "users.read", href: "/dashboard/users" },
   { label: "Roles", permission: "roles.read", href: "/dashboard/roles" },
   { label: "Profile", permission: "profile.read", href: "/dashboard/profile" },
@@ -771,3 +772,4 @@ function LineItems({
     </div>
   );
 }
+

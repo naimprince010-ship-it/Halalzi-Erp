@@ -101,6 +101,7 @@ model Company {
   journalEntries JournalEntry[]
   receivables Receivable[]
   payables Payable[]
+  auditLogs AuditLog[]
 
   @@index([status])
 }
@@ -187,6 +188,7 @@ model User {
   company   Company   @relation(fields: [companyId], references: [id])
   userRoles UserRole[]
   sessions  Session[]
+  auditLogs AuditLog[]
 
   @@index([companyId])
   @@index([status])
@@ -426,4 +428,24 @@ model Payable {
   @@index([companyId])
   @@index([status])
   @@index([purchaseOrderId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
