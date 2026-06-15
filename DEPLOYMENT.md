@@ -6,6 +6,14 @@ Use:
 - Managed PostgreSQL for the database
 - GitHub as source control
 
+## Current Production Deployment
+- App URL: `https://halalzi-erp.vercel.app`
+- Vercel project: `halalzi-erp`
+- GitHub repo: `https://github.com/naimprince010-ship-it/Halalzi-Erp`
+- Production branch: `master`
+- Database provider: Neon via Vercel Marketplace
+- Database resource: `neon-byzantine-ribbon`
+
 ## Required Environment Variables
 Set these in Vercel:
 
@@ -84,3 +92,15 @@ Expected:
 - No email verification yet
 - No automated backup policy yet
 - No monitoring/alerting yet
+
+## Production Hardening Checklist
+Before sharing the app with real clients:
+
+1. Rotate demo/admin credentials.
+2. Add a custom domain and verify HTTPS.
+3. Confirm Neon backup/restore settings and export process.
+4. Enable Vercel runtime monitoring and review error logs weekly.
+5. Add rate limiting to auth and write APIs.
+6. Replace `prisma db push` in production build with stable migrations once schema is no longer changing daily.
+7. Add audit logging for user, role, inventory, sales, procurement, and finance mutations.
+8. Document client onboarding/offboarding steps.
