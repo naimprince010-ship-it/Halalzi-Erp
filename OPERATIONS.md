@@ -54,6 +54,8 @@ Minimum MVP policy:
 4. Never run destructive SQL without checking `companyId` scope.
 
 ## Release Process
+Use `10-releases/HAL-79_CORE_ERP_MVP_RELEASE_CHECKLIST.md` as the Core ERP MVP release gate.
+
 1. Make changes locally.
 2. Run:
 

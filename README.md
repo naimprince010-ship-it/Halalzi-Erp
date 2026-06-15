@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Halalzi ERP
 
-## Getting Started
+Halalzi ERP is a multi-tenant Core ERP MVP built with Next.js, Prisma, PostgreSQL, and Vercel.
 
-First, run the development server:
+## Production
 
-```bash
+- App: `https://halalzi-erp.vercel.app`
+- Source: `https://github.com/naimprince010-ship-it/Halalzi-Erp`
+- Hosting: Vercel
+- Database: Neon PostgreSQL
+
+## Core MVP Modules
+
+- Authentication
+- Company and tenant isolation
+- Users, roles, and RBAC
+- Products and basic inventory
+- Sales orders
+- Vendors and purchase orders
+- Basic finance accounts, journal entries, receivables, and payables
+- Production smoke testing
+
+## Local Development
+
+```powershell
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Verification
 
-## Learn More
+Run before committing:
 
-To learn more about Next.js, take a look at the following resources:
+```powershell
+npm run lint
+npm run build:ci
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+For a production smoke test:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```powershell
+$env:SMOKE_BASE_URL="https://halalzi-erp.vercel.app"
+$env:SMOKE_ADMIN_EMAIL="<admin email>"
+$env:SMOKE_ADMIN_PASSWORD="<admin password>"
+npm run smoke:prod
+```
 
-## Deploy on Vercel
+## Important Docs
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `DEPLOYMENT.md` - deployment setup and environment variables
+- `OPERATIONS.md` - production operations and incident response
+- `MIGRATIONS.md` - Prisma migration baseline and future migration workflow
+- `10-releases/HAL-79_CORE_ERP_MVP_RELEASE_CHECKLIST.md` - current Core ERP MVP release checklist
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Production Migration Note
+
+The current production database was initially created with `prisma db push`.
+
+Do not switch production to `prisma migrate deploy` until the baseline migration has been marked applied using the guarded helper documented in `MIGRATIONS.md`.
