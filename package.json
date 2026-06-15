@@ -12,6 +12,7 @@
     "prisma:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "smoke:prod": "node scripts/production-smoke.mjs",
+    "check:env": "node scripts/check-production-env.mjs",
     "check": "npm run lint && npm run build"
   },
   "dependencies": {
