@@ -37,6 +37,12 @@ npm run lint
 npm run build
 ```
 
+For CI without production database writes, use:
+
+```powershell
+npm run build:ci
+```
+
 For local env checking, `npm run check:env` may warn about localhost. That is expected locally. For production env values it should pass without placeholder errors.
 
 ## Production Database Setup
@@ -85,7 +91,6 @@ Expected:
 ```
 
 ## Production Blockers Still Open
-- No CI pipeline yet
 - No audit log yet
 - No rate limiting yet
 - No password reset yet

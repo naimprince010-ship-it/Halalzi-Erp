@@ -63,8 +63,9 @@ npm run build
 ```
 
 3. Commit and push to `master`.
-4. Wait for Vercel production deployment.
-5. Run production smoke test:
+4. Confirm the GitHub CI workflow passes.
+5. Wait for Vercel production deployment.
+6. Run production smoke test:
 
 ```powershell
 $env:SMOKE_BASE_URL="https://halalzi-erp.vercel.app"
@@ -73,7 +74,7 @@ $env:SMOKE_ADMIN_PASSWORD="<admin password>"
 npm run smoke:prod
 ```
 
-6. Check Vercel runtime logs for errors.
+7. Check Vercel runtime logs for errors.
 
 ## Incident Response
 For login/API/database errors:
@@ -91,4 +92,4 @@ For login/API/database errors:
 - Add password reset/email verification.
 - Add role permission edit screen.
 - Replace build-time `prisma db push` with migration deploy once schema stabilizes.
-- Add CI checks for lint/build/smoke script syntax.
+- Add authenticated preview smoke tests after a safe preview database strategy exists.
