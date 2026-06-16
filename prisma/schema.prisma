@@ -189,6 +189,7 @@ model User {
   userRoles UserRole[]
   sessions  Session[]
   auditLogs AuditLog[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([companyId])
   @@index([status])
@@ -251,6 +252,20 @@ model Session {
   expiresAt DateTime
   createdAt DateTime  @default(now())
   revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id])
 

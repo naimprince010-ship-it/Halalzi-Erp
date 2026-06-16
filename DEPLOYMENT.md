@@ -91,8 +91,8 @@ Expected:
 ```
 
 ## Production Blockers Still Open
-- No password reset yet
 - No email verification yet
+- No email delivery provider yet
 - No automated backup policy yet
 - No monitoring/alerting yet
 

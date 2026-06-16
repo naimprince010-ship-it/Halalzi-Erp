@@ -39,7 +39,12 @@ function getClientIp(request: NextRequest) {
 function getPolicy(request: NextRequest): RateLimitPolicy | null {
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/api/auth/login" || pathname === "/api/auth/register") {
+  if (
+    pathname === "/api/auth/login" ||
+    pathname === "/api/auth/register" ||
+    pathname === "/api/auth/password-reset/request" ||
+    pathname === "/api/auth/password-reset/confirm"
+  ) {
     return AUTH_POLICY;
   }
 

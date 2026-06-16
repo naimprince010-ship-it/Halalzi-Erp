@@ -91,7 +91,7 @@ function hasSafeAuditLogShape(body) {
 }
 
 async function main() {
-  const publicPages = await Promise.all(["/", "/login", "/register"].map(page));
+  const publicPages = await Promise.all(["/", "/login", "/register", "/forgot-password", "/reset-password"].map(page));
   add("public pages render", publicPages.every((item) => item.status === 200), { publicPages });
 
   const protectedApiPaths = [

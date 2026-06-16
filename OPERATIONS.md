@@ -89,7 +89,7 @@ For login/API/database errors:
 6. If data risk exists, pause client onboarding until root cause is known.
 
 ## Near-Term Hardening Tasks
-- Add password reset/email verification.
+- Add email delivery provider for password reset and email verification.
 - Add role permission edit screen.
 - Follow `MIGRATIONS.md` and run `npm run prisma:baseline:production -- --apply` against the production database, then replace build-time `prisma db push` with migration deploy once schema stabilizes.
 - Add authenticated preview smoke tests after a safe preview database strategy exists.

@@ -70,6 +70,9 @@ export function LoginForm() {
         />
         <span>Remember me</span>
       </label>
+      <p className="form-note">
+        <Link href="/forgot-password">Forgot password?</Link>
+      </p>
       <button className="primary-button" disabled={loading} type="submit">
         {loading ? "Signing in..." : "Sign in"}
       </button>
