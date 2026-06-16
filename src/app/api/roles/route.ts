@@ -35,6 +35,23 @@ export async function GET() {
         createdAt: "asc",
       },
     });
+    const permissions = await prisma.permission.findMany({
+      select: {
+        id: true,
+        key: true,
+        module: true,
+        action: true,
+        description: true,
+      },
+      orderBy: [
+        {
+          module: "asc",
+        },
+        {
+          key: "asc",
+        },
+      ],
+    });
 
     return NextResponse.json({
       roles: roles.map((role) => ({
@@ -45,6 +62,7 @@ export async function GET() {
         createdAt: role.createdAt,
         permissions: role.rolePermissions.map((rolePermission) => rolePermission.permission),
       })),
+      permissions,
     });
   } catch (error) {
     return errorResponse(error);

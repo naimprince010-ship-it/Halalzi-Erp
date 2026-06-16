@@ -11,6 +11,11 @@ type RolePermission = {
   description: string | null;
 };
 
+type AvailablePermission = RolePermission & {
+  module: string;
+  action: string;
+};
+
 type CompanyRole = {
   id: string;
   name: string;
@@ -22,6 +27,7 @@ type CompanyRole = {
 
 type RolesResponse = {
   roles: CompanyRole[];
+  permissions: AvailablePermission[];
 };
 
 const navItems = [
@@ -59,6 +65,10 @@ export default function RolesDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [rolesLoading, setRolesLoading] = useState(false);
+  const [availablePermissions, setAvailablePermissions] = useState<AvailablePermission[]>([]);
+  const [draftPermissions, setDraftPermissions] = useState<Record<string, string[]>>({});
+  const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   async function loadRoles() {
     setRolesLoading(true);
@@ -77,6 +87,10 @@ export default function RolesDashboardPage() {
       }
 
       setRoles(payload.roles ?? []);
+      setAvailablePermissions(payload.permissions ?? []);
+      setDraftPermissions(
+        Object.fromEntries((payload.roles ?? []).map((role) => [role.id, role.permissions.map((permission) => permission.id)])),
+      );
     } catch {
       setError("Could not load roles. Please try again.");
     } finally {
@@ -130,6 +144,62 @@ export default function RolesDashboardPage() {
   }, [currentUser]);
 
   const canReadRoles = currentUser?.permissions.includes("roles.read") ?? false;
+  const canUpdateRoles =
+    currentUser?.permissions.includes("roles.update") || currentUser?.permissions.includes("roles.assign") || false;
+
+  function togglePermission(roleId: string, permissionId: string) {
+    setDraftPermissions((current) => {
+      const selected = new Set(current[roleId] ?? []);
+
+      if (selected.has(permissionId)) {
+        selected.delete(permissionId);
+      } else {
+        selected.add(permissionId);
+      }
+
+      return {
+        ...current,
+        [roleId]: [...selected],
+      };
+    });
+  }
+
+  async function saveRolePermissions(role: CompanyRole) {
+    setError(null);
+    setSuccess(null);
+    setSavingRoleId(role.id);
+
+    try {
+      const response = await fetch(`/api/roles/${role.id}/permissions`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          permissionIds: draftPermissions[role.id] ?? [],
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        role?: CompanyRole;
+        error?: { message?: string };
+      };
+
+      if (!response.ok || !payload.role) {
+        throw new Error(payload.error?.message ?? "Could not update role permissions.");
+      }
+
+      const updatedRole = payload.role;
+
+      setRoles((current) => current.map((item) => (item.id === updatedRole.id ? updatedRole : item)));
+      setDraftPermissions((current) => ({
+        ...current,
+        [updatedRole.id]: updatedRole.permissions.map((permission) => permission.id),
+      }));
+      setSuccess(`${updatedRole.name} permissions updated.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update role permissions.");
+    } finally {
+      setSavingRoleId(null);
+    }
+  }
 
   async function handleLogout() {
     setError(null);
@@ -202,6 +272,7 @@ export default function RolesDashboardPage() {
         </header>
 
         {error ? <div className="form-error">{error}</div> : null}
+        {success ? <div className="form-success">{success}</div> : null}
 
         {!canReadRoles ? (
           <section className="access-panel" role="alert" aria-live="polite">
@@ -264,6 +335,39 @@ export default function RolesDashboardPage() {
                           ))
                         )}
                       </div>
+                      {canUpdateRoles ? (
+                        <>
+                          <span>Edit permissions</span>
+                          <div className="permission-grid" aria-label={`Edit permissions for ${role.name}`}>
+                            {availablePermissions.map((permission) => {
+                              const checked = (draftPermissions[role.id] ?? []).includes(permission.id);
+
+                              return (
+                                <label className="permission-check" key={permission.id}>
+                                  <input
+                                    checked={checked}
+                                    onChange={() => togglePermission(role.id, permission.id)}
+                                    type="checkbox"
+                                  />
+                                  <span>
+                                    <strong>{permission.key}</strong>
+                                    <small>{permission.description ?? `${permission.module}.${permission.action}`}</small>
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          <span>Action</span>
+                          <button
+                            className="secondary-button"
+                            disabled={savingRoleId === role.id}
+                            onClick={() => saveRolePermissions(role)}
+                            type="button"
+                          >
+                            {savingRoleId === role.id ? "Saving..." : "Save permissions"}
+                          </button>
+                        </>
+                      ) : null}
                     </article>
                   ))
                 )}

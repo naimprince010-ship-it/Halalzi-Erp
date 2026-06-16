@@ -112,7 +112,6 @@ For login/API/database errors:
 ## Near-Term Hardening Tasks
 - Verify custom email sender domain in Resend.
 - Enforce verified email at login only after existing production admins are verified.
-- Add role permission edit screen.
 - Follow `MIGRATIONS.md` and run `npm run prisma:baseline:production -- --apply` against the production database, then replace build-time `prisma db push` with migration deploy once schema stabilizes.
 - Add authenticated preview smoke tests after a safe preview database strategy exists.
 - Add audit log filters/export after real client reporting needs are known.

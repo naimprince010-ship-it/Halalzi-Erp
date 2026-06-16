@@ -45,6 +45,7 @@ The current Core ERP MVP includes:
 | Password reset email delivery available | PASS | HAL-88 Resend integration |
 | Email verification foundation available | PASS | HAL-89 secure token verification flow |
 | Email verification enforcement plan documented | PASS | HAL-90 sender-domain and rollout plan |
+| Role permission editing available | PASS | HAL-91 role permission editor |
 | Production migration baseline applied | PENDING | Requires trusted production `DATABASE_URL` |
 | Build command switched to migrate deploy | PENDING | Should happen only after baseline apply |
 

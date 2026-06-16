@@ -9,6 +9,7 @@ export const DEFAULT_PERMISSIONS = [
   { key: "users.disable", module: "users", action: "disable", description: "Disable users" },
   { key: "roles.read", module: "roles", action: "read", description: "View roles" },
   { key: "roles.assign", module: "roles", action: "assign", description: "Assign roles" },
+  { key: "roles.update", module: "roles", action: "update", description: "Update role permissions" },
   { key: "products.read", module: "products", action: "read", description: "View products" },
   { key: "products.create", module: "products", action: "create", description: "Create products" },
   { key: "products.update", module: "products", action: "update", description: "Update products" },

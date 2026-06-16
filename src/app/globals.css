@@ -507,6 +507,42 @@ button {
   font-weight: 700;
 }
 
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.permission-check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.permission-check input {
+  margin-top: 3px;
+}
+
+.permission-check span {
+  display: grid;
+  gap: 4px;
+}
+
+.permission-check strong {
+  font-size: 13px;
+}
+
+.permission-check small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .users-list {
   display: grid;
   gap: 10px;

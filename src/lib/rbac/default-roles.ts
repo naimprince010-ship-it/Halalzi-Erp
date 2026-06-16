@@ -41,6 +41,7 @@ const ADMIN_PERMISSIONS: PermissionKey[] = [
   "users.disable",
   "roles.read",
   "roles.assign",
+  "roles.update",
   "products.read",
   "products.create",
   "products.update",
