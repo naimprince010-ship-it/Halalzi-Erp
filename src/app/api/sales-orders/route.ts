@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { AppError, errorResponse } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
@@ -157,6 +158,20 @@ export async function POST(request: Request) {
       }
 
       throw new AppError("INTERNAL_SERVER_ERROR", "Unable to generate sales order number.", 500);
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "sales_order.create",
+      entityType: "sales_order",
+      entityId: created.id,
+      summary: `Sales order created: ${created.orderNumber}`,
+      metadata: {
+        orderNumber: created.orderNumber,
+        status: created.status,
+        totalAmount: Number(created.totalAmount),
+      },
     });
 
     return NextResponse.json({ data: created }, { status: 201 });

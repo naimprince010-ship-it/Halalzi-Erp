@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AppError, errorResponse } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
@@ -76,6 +77,20 @@ export async function POST(
         },
         select: safePurchaseOrderSelect,
       });
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "purchase_order.receive",
+      entityType: "purchase_order",
+      entityId: received.id,
+      summary: `Purchase order received: ${received.purchaseOrderNumber}`,
+      metadata: {
+        purchaseOrderNumber: received.purchaseOrderNumber,
+        status: received.status,
+        totalAmount: Number(received.totalAmount),
+      },
     });
 
     return NextResponse.json({ purchaseOrder: received });

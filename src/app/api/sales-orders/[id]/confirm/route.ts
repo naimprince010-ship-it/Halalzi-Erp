@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AppError, errorResponse } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
@@ -101,6 +102,20 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         },
         select: safeSalesOrderSelect,
       });
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "sales_order.confirm",
+      entityType: "sales_order",
+      entityId: confirmed.id,
+      summary: `Sales order confirmed: ${confirmed.orderNumber}`,
+      metadata: {
+        orderNumber: confirmed.orderNumber,
+        status: confirmed.status,
+        totalAmount: Number(confirmed.totalAmount),
+      },
     });
 
     return NextResponse.json({ data: confirmed });

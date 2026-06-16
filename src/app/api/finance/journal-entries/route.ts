@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { AppError, errorResponse } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
@@ -78,6 +79,21 @@ export async function POST(request: Request) {
         },
         select: safeJournalEntrySelect,
       });
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "finance.journal.create",
+      entityType: "journal_entry",
+      entityId: journalEntry.id,
+      summary: `Journal entry created: ${journalEntry.entryNumber}`,
+      metadata: {
+        entryNumber: journalEntry.entryNumber,
+        status: journalEntry.status,
+        totalDebit: Number(journalEntry.totalDebit),
+        totalCredit: Number(journalEntry.totalCredit),
+      },
     });
 
     return NextResponse.json({ journalEntry }, { status: 201 });

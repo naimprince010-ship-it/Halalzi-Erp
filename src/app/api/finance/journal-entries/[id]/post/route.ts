@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { AppError, errorResponse, forbidden } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
@@ -65,6 +66,21 @@ export async function POST(_request: Request, context: RouteContext) {
         },
         select: safeJournalEntrySelect,
       });
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "finance.journal.post",
+      entityType: "journal_entry",
+      entityId: journalEntry.id,
+      summary: `Journal entry posted: ${journalEntry.entryNumber}`,
+      metadata: {
+        entryNumber: journalEntry.entryNumber,
+        status: journalEntry.status,
+        totalDebit: Number(journalEntry.totalDebit),
+        totalCredit: Number(journalEntry.totalCredit),
+      },
     });
 
     return NextResponse.json({ journalEntry });

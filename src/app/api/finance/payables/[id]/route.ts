@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { AppError, errorResponse, forbidden } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
@@ -37,6 +38,20 @@ export async function PATCH(request: Request, context: RouteContext) {
       where: { id },
       data: buildSettlementUpdate(input, Number(existingPayable.amount)),
       select: safePayableSelect,
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "finance.payable.update",
+      entityType: "payable",
+      entityId: payable.id,
+      summary: `Payable updated: ${payable.vendorNameSnapshot}`,
+      metadata: {
+        status: payable.status,
+        amount: Number(payable.amount),
+        paidAmount: Number(payable.paidAmount),
+      },
     });
 
     return NextResponse.json({ payable });

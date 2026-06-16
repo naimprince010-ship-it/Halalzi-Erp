@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError, errorResponse } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
@@ -110,6 +111,20 @@ export async function POST(request: Request) {
       }
 
       throw new AppError("INTERNAL_SERVER_ERROR", "Unable to generate purchase order number.", 500);
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "purchase_order.create",
+      entityType: "purchase_order",
+      entityId: created.id,
+      summary: `Purchase order created: ${created.purchaseOrderNumber}`,
+      metadata: {
+        purchaseOrderNumber: created.purchaseOrderNumber,
+        status: created.status,
+        totalAmount: Number(created.totalAmount),
+      },
     });
 
     return NextResponse.json({ purchaseOrder: created }, { status: 201 });
