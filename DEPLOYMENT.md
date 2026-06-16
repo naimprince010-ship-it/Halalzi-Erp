@@ -29,6 +29,36 @@ RESEND_API_KEY="your-resend-api-key"
 Do not use local PGlite or local `.env` values in production.
 Do not commit real email API keys to Git. Store `RESEND_API_KEY` in Vercel environment variables.
 
+## Email Sender Domain Setup
+
+Current MVP email delivery can use Resend's sandbox sender for internal testing, but real client onboarding should use a verified sender domain.
+
+Recommended production setup:
+
+- App domain: `halalzi.com` or the final client-facing domain.
+- Email subdomain: `mail.halalzi.com`.
+- Sender: `Halalzi ERP <no-reply@mail.halalzi.com>`.
+- Reply-to mailbox, if needed later: `support@halalzi.com`.
+
+Resend setup steps:
+
+1. Open Resend Domains.
+2. Add `mail.halalzi.com` as the sending domain.
+3. Copy DNS records from Resend.
+4. Add DNS records at the domain provider:
+   - SPF/TXT
+   - DKIM/CNAME records
+   - DMARC/TXT if Resend recommends one
+5. Wait until Resend shows the domain as verified.
+6. Update Vercel `EMAIL_FROM` to:
+
+```env
+EMAIL_FROM="Halalzi ERP <no-reply@mail.halalzi.com>"
+```
+
+7. Redeploy production.
+8. Send a password reset test email and an email verification test email.
+
 ## Pre-Deploy Local Checks
 Run:
 

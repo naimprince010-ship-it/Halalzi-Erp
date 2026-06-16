@@ -19,18 +19,39 @@ Halalzi ERP is a multi-tenant SaaS app.
 Use a dedicated database only when a client requires separate infrastructure for compliance, contract, performance, or enterprise isolation.
 
 ## Client Onboarding
-1. Register the client company through the production register flow.
-2. Create or confirm the first admin user.
-3. Verify admin can access dashboard modules.
-4. Add staff users from Users.
-5. Assign least-privilege roles.
-6. Add initial products, vendors, and finance accounts.
-7. Run a short smoke workflow:
+1. Confirm the production sender domain is verified in Resend before onboarding real clients.
+2. Register the client company through the production register flow.
+3. Create or confirm the first admin user.
+4. Verify the first admin email address.
+5. Verify admin can access dashboard modules.
+6. Add staff users from Users.
+7. Assign least-privilege roles.
+8. Add initial products, vendors, and finance accounts.
+9. Run a short smoke workflow:
    - create product
    - create vendor
    - create sales order draft
    - create purchase order draft
    - verify finance pages load
+
+## Email Verification Rollout
+
+Email verification exists as a foundation but is not enforced at login yet. This avoids locking out existing production users while the sender domain is still being finalized.
+
+Before enforcing verified email at login:
+
+1. Verify the Resend sender domain.
+2. Confirm `EMAIL_FROM` uses the verified sender.
+3. Send verification emails to all existing admin users.
+4. Confirm the production admin account is verified.
+5. Keep an emergency admin account available.
+6. Deploy enforcement behind a rollback-friendly code change.
+7. Run production smoke immediately after deployment.
+
+Rollback rule:
+
+- If legitimate users are blocked unexpectedly, disable the enforcement change first.
+- Do not delete verification tokens or user records during rollback.
 
 ## Client Offboarding
 1. Disable all client users.
@@ -90,6 +111,7 @@ For login/API/database errors:
 
 ## Near-Term Hardening Tasks
 - Verify custom email sender domain in Resend.
+- Enforce verified email at login only after existing production admins are verified.
 - Add role permission edit screen.
 - Follow `MIGRATIONS.md` and run `npm run prisma:baseline:production -- --apply` against the production database, then replace build-time `prisma db push` with migration deploy once schema stabilizes.
 - Add authenticated preview smoke tests after a safe preview database strategy exists.
