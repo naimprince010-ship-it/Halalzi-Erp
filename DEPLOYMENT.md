@@ -91,7 +91,6 @@ Expected:
 ```
 
 ## Production Blockers Still Open
-- No audit log yet
 - No rate limiting yet
 - No password reset yet
 - No email verification yet
@@ -107,5 +106,5 @@ Before sharing the app with real clients:
 4. Enable Vercel runtime monitoring and review error logs weekly.
 5. Add rate limiting to auth and write APIs.
 6. Follow `MIGRATIONS.md` to baseline production with `npm run prisma:baseline:production -- --apply`, then replace `prisma db push` with `prisma migrate deploy` once schema is no longer changing daily.
-7. Add audit logging for user, role, inventory, sales, procurement, and finance mutations.
+7. Review audit logs after each demo and add export/filtering when client reporting requires it.
 8. Document client onboarding/offboarding steps.

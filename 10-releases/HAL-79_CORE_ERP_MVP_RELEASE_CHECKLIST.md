@@ -36,9 +36,10 @@ The current Core ERP MVP includes:
 | Auth context safe response | PASS | No password/session hashes exposed |
 | Admin can read core module APIs | PASS | Users, roles, products, vendors, purchases, sales, finance APIs returned 200 |
 | GitHub CI configured | PASS | CI runs on `master` push |
-| CI latest run passing | PASS | HAL-78 commit CI passed |
+| CI latest run passing | PASS | HAL-84 commit CI passed |
 | Migration baseline created | PASS | HAL-76 baseline migration |
 | Production migration helper ready | PASS | HAL-77 guarded helper |
+| Basic audit/activity log available | PASS | HAL-82, HAL-83, and HAL-84 audit work |
 | Production migration baseline applied | PENDING | Requires trusted production `DATABASE_URL` |
 | Build command switched to migrate deploy | PENDING | Should happen only after baseline apply |
 
@@ -59,6 +60,7 @@ Before calling the Core ERP MVP demo-ready:
    - Sales
    - Procurement
    - Finance
+   - Audit
 5. Create one test product.
 6. Create one test vendor.
 7. Create one draft sales order.
@@ -88,8 +90,8 @@ Expected smoke result:
 
 ```json
 {
-  "total": 6,
-  "passed": 6,
+  "total": 8,
+  "passed": 8,
   "failed": 0
 }
 ```
@@ -102,9 +104,9 @@ These are not blockers for Core ERP MVP demo readiness, but they should be compl
 2. Switch production build from `prisma db push` to `prisma migrate deploy`.
 3. Add password reset and email verification.
 4. Add API rate limiting for auth and write endpoints.
-5. Add audit logging for user, role, inventory, sales, procurement, and finance mutations.
-6. Add CSV/export reports for client data.
-7. Add backup/restore verification notes for Neon.
+5. Add CSV/export reports for client data.
+6. Add backup/restore verification notes for Neon.
+7. Add deeper audit filters and export after real client reporting needs are known.
 8. Rotate demo admin password before external demos.
 
 ## Out Of Scope For Core ERP MVP
