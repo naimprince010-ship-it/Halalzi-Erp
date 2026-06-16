@@ -43,7 +43,9 @@ function getPolicy(request: NextRequest): RateLimitPolicy | null {
     pathname === "/api/auth/login" ||
     pathname === "/api/auth/register" ||
     pathname === "/api/auth/password-reset/request" ||
-    pathname === "/api/auth/password-reset/confirm"
+    pathname === "/api/auth/password-reset/confirm" ||
+    pathname === "/api/auth/email-verification/request" ||
+    pathname === "/api/auth/email-verification/confirm"
   ) {
     return AUTH_POLICY;
   }

@@ -95,7 +95,6 @@ Expected:
 ```
 
 ## Production Blockers Still Open
-- No email verification yet
 - No custom verified sender domain yet
 - No automated backup policy yet
 - No monitoring/alerting yet

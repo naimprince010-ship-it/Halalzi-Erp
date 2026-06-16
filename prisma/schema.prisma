@@ -180,6 +180,7 @@ model User {
   companyId    String
   name         String
   email        String     @unique
+  emailVerifiedAt DateTime?
   passwordHash String
   status       UserStatus @default(active)
   createdAt    DateTime   @default(now())
@@ -190,6 +191,7 @@ model User {
   sessions  Session[]
   auditLogs AuditLog[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@index([companyId])
   @@index([status])
@@ -260,6 +262,20 @@ model Session {
 }
 
 model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
   id        String    @id @default(cuid())
   userId    String
   tokenHash String    @unique

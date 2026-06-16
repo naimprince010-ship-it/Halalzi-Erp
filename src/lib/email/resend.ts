@@ -11,6 +11,12 @@ type PasswordResetEmailInput = {
   resetUrl: string;
 };
 
+type EmailVerificationInput = {
+  to: string;
+  name: string;
+  verificationUrl: string;
+};
+
 function getAppBaseUrl() {
   const configuredUrl = process.env.APP_BASE_URL?.trim();
   if (configuredUrl) {
@@ -36,6 +42,12 @@ function getEmailFrom() {
 
 export function buildPasswordResetUrl(token: string) {
   const url = new URL("/reset-password", getAppBaseUrl());
+  url.searchParams.set("token", token);
+  return url.toString();
+}
+
+export function buildEmailVerificationUrl(token: string) {
+  const url = new URL("/verify-email", getAppBaseUrl());
   url.searchParams.set("token", token);
   return url.toString();
 }
@@ -96,6 +108,33 @@ export function sendPasswordResetEmail({ to, name, resetUrl }: PasswordResetEmai
         </a>
       </p>
       <p>This link expires in 30 minutes. If you did not request this, you can ignore this email.</p>
+    </div>
+  `;
+
+  return sendEmail({ to, subject, text, html });
+}
+
+export function sendEmailVerificationEmail({ to, name, verificationUrl }: EmailVerificationInput) {
+  const subject = "Verify your Halalzi ERP email";
+  const text = [
+    `Hello ${name},`,
+    "",
+    "Please verify your email address for Halalzi ERP.",
+    `Open this secure link to verify your email: ${verificationUrl}`,
+    "",
+    "This link expires in 24 hours. If you did not create this account, you can ignore this email.",
+  ].join("\n");
+  const html = `
+    <div style="font-family: Arial, sans-serif; color: #17202a; line-height: 1.6;">
+      <h2 style="margin: 0 0 12px;">Verify your Halalzi ERP email</h2>
+      <p>Hello ${name},</p>
+      <p>Please verify your email address for Halalzi ERP.</p>
+      <p>
+        <a href="${verificationUrl}" style="display: inline-block; background: #1f5f8b; color: #ffffff; padding: 10px 14px; border-radius: 6px; text-decoration: none;">
+          Verify email
+        </a>
+      </p>
+      <p>This link expires in 24 hours. If you did not create this account, you can ignore this email.</p>
     </div>
   `;
 

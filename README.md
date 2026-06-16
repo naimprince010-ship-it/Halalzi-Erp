@@ -20,6 +20,7 @@ Halalzi ERP is a multi-tenant Core ERP MVP built with Next.js, Prisma, PostgreSQ
 - Basic finance accounts, journal entries, receivables, and payables
 - Audit/activity log
 - Password reset foundation
+- Email verification foundation
 - Production smoke testing
 
 ## Local Development

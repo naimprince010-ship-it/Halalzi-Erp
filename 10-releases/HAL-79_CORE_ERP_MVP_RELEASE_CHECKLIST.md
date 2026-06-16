@@ -43,6 +43,7 @@ The current Core ERP MVP includes:
 | Basic API rate limiting available | PASS | HAL-86 middleware guard |
 | Password reset foundation available | PASS | HAL-87 secure token reset flow |
 | Password reset email delivery available | PASS | HAL-88 Resend integration |
+| Email verification foundation available | PASS | HAL-89 secure token verification flow |
 | Production migration baseline applied | PENDING | Requires trusted production `DATABASE_URL` |
 | Build command switched to migrate deploy | PENDING | Should happen only after baseline apply |
 
@@ -105,7 +106,7 @@ These are not blockers for Core ERP MVP demo readiness, but they should be compl
 
 1. Apply production migration baseline with a trusted production `DATABASE_URL`.
 2. Switch production build from `prisma db push` to `prisma migrate deploy`.
-3. Verify custom email sender domain and add email verification.
+3. Verify custom email sender domain.
 4. Replace in-memory rate limiting with durable shared rate limiting if traffic or abuse risk grows.
 5. Add CSV/export reports for client data.
 6. Add backup/restore verification notes for Neon.
