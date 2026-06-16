@@ -91,7 +91,6 @@ Expected:
 ```
 
 ## Production Blockers Still Open
-- No rate limiting yet
 - No password reset yet
 - No email verification yet
 - No automated backup policy yet
@@ -104,7 +103,7 @@ Before sharing the app with real clients:
 2. Add a custom domain and verify HTTPS.
 3. Confirm Neon backup/restore settings and export process.
 4. Enable Vercel runtime monitoring and review error logs weekly.
-5. Add rate limiting to auth and write APIs.
+5. Upgrade basic in-memory API rate limiting to durable shared rate limiting if traffic or abuse risk grows.
 6. Follow `MIGRATIONS.md` to baseline production with `npm run prisma:baseline:production -- --apply`, then replace `prisma db push` with `prisma migrate deploy` once schema is no longer changing daily.
 7. Review audit logs after each demo and add export/filtering when client reporting requires it.
 8. Document client onboarding/offboarding steps.

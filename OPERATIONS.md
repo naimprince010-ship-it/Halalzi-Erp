@@ -89,9 +89,9 @@ For login/API/database errors:
 6. If data risk exists, pause client onboarding until root cause is known.
 
 ## Near-Term Hardening Tasks
-- Add rate limiting for auth and write endpoints.
 - Add password reset/email verification.
 - Add role permission edit screen.
 - Follow `MIGRATIONS.md` and run `npm run prisma:baseline:production -- --apply` against the production database, then replace build-time `prisma db push` with migration deploy once schema stabilizes.
 - Add authenticated preview smoke tests after a safe preview database strategy exists.
 - Add audit log filters/export after real client reporting needs are known.
+- Upgrade basic in-memory rate limiting to durable shared rate limiting when usage grows beyond MVP demo traffic.
