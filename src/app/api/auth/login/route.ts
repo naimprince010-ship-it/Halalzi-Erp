@@ -4,6 +4,7 @@ import { validateLoginInput } from "@/lib/auth/auth-validation";
 import { toCurrentUserPayload } from "@/lib/auth/current-user";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { createDefaultCompanyRoles } from "@/lib/rbac/default-roles";
 
@@ -76,6 +77,18 @@ export async function POST(request: Request) {
     });
 
     const session = await createSession(user.id, input.rememberMe);
+    await recordAuditLog({
+      companyId: refreshedUser.company.id,
+      userId: refreshedUser.id,
+      action: "auth.login",
+      entityType: "user",
+      entityId: refreshedUser.id,
+      summary: `${refreshedUser.name} signed in.`,
+      metadata: {
+        rememberMe: Boolean(input.rememberMe),
+      },
+    });
+
     const response = NextResponse.json(
       toCurrentUserPayload({
         id: refreshedUser.id,

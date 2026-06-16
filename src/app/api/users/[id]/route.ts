@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError, errorResponse } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
@@ -119,6 +120,19 @@ export async function PATCH(
         },
       });
 
+      await recordAuditLog({
+        companyId: scope.companyId,
+        userId: currentUser.user.id,
+        action: "user.status.update",
+        entityType: "user",
+        entityId: user.id,
+        summary: `User status updated: ${user.name}`,
+        metadata: {
+          previousStatus: existingUser.status,
+          nextStatus: user.status,
+        },
+      });
+
       return NextResponse.json({
         user: {
           id: user.id,
@@ -169,6 +183,19 @@ export async function PATCH(
                 role: { select: { id: true, name: true, key: true } },
               },
             },
+          },
+        });
+
+        await recordAuditLog({
+          companyId: scope.companyId,
+          userId: currentUser.user.id,
+          action: "user.update",
+          entityType: "user",
+          entityId: user.id,
+          summary: `User updated: ${user.name}`,
+          metadata: {
+            nameChanged: Boolean(basicInfoInput.name),
+            emailChanged: Boolean(basicInfoInput.email),
           },
         });
 

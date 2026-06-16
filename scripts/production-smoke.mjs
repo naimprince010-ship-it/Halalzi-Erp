@@ -68,6 +68,28 @@ function hasSafeSummaryShape(body) {
   );
 }
 
+function hasSafeAuditLogShape(body) {
+  const auditLogs = body?.auditLogs;
+  if (!Array.isArray(auditLogs)) return false;
+
+  return auditLogs.every((log) => {
+    if (!log || typeof log !== "object" || Array.isArray(log)) return false;
+    if (typeof log.id !== "string") return false;
+    if (typeof log.action !== "string") return false;
+    if (typeof log.entityType !== "string") return false;
+    if (log.entityId !== null && typeof log.entityId !== "string") return false;
+    if (typeof log.summary !== "string") return false;
+    if (typeof log.createdAt !== "string") return false;
+    if (log.user !== null) {
+      if (!log.user || typeof log.user !== "object" || Array.isArray(log.user)) return false;
+      if (typeof log.user.id !== "string") return false;
+      if (typeof log.user.name !== "string") return false;
+      if (typeof log.user.email !== "string") return false;
+    }
+    return true;
+  });
+}
+
 async function main() {
   const publicPages = await Promise.all(["/", "/login", "/register"].map(page));
   add("public pages render", publicPages.every((item) => item.status === 200), { publicPages });
@@ -122,6 +144,20 @@ async function main() {
           status: dashboardSummary.response.status,
           unsafe: hasUnsafeKeys(dashboardSummary.body),
           keys: dashboardSummary.body?.summary ? Object.keys(dashboardSummary.body.summary) : [],
+        },
+      );
+
+      const auditLogs = await request("/api/audit-logs", { headers: authHeaders });
+      add(
+        "audit logs have safe shape and include login activity",
+        auditLogs.response.status === 200 &&
+          hasSafeAuditLogShape(auditLogs.body) &&
+          !hasUnsafeKeys(auditLogs.body) &&
+          auditLogs.body.auditLogs.some((log) => log.action === "auth.login"),
+        {
+          status: auditLogs.response.status,
+          unsafe: hasUnsafeKeys(auditLogs.body),
+          count: Array.isArray(auditLogs.body?.auditLogs) ? auditLogs.body.auditLogs.length : null,
         },
       );
 

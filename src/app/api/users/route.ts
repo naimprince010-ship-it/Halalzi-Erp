@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError, errorResponse } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
@@ -139,6 +140,19 @@ export async function POST(request: Request) {
       }
 
       return user;
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "user.create",
+      entityType: "user",
+      entityId: createdUser.id,
+      summary: `User created: ${createdUser.name}`,
+      metadata: {
+        targetStatus: createdUser.status,
+        defaultRole: "staff",
+      },
     });
 
     return NextResponse.json({ user: createdUser }, { status: 201 });

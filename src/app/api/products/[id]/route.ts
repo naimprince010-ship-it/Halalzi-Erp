@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError, errorResponse } from "@/lib/auth/auth-errors";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
@@ -141,6 +142,20 @@ export async function PATCH(
       select: safeProductSelect,
     });
 
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "product.update",
+      entityType: "product",
+      entityId: product.id,
+      summary: `Product updated: ${product.name}`,
+      metadata: {
+        sku: product.sku,
+        status: product.status,
+        stockAdjusted: input.stockQuantity !== undefined,
+      },
+    });
+
     return NextResponse.json({ product });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -182,6 +197,19 @@ export async function DELETE(
         status: "inactive",
       },
       select: safeProductSelect,
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "product.archive",
+      entityType: "product",
+      entityId: product.id,
+      summary: `Product archived: ${product.name}`,
+      metadata: {
+        sku: product.sku,
+        status: product.status,
+      },
     });
 
     return NextResponse.json({ product });
