@@ -21,9 +21,13 @@ Set these in Vercel:
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require"
 SESSION_SECRET="a-long-random-secret-at-least-32-characters"
 NODE_ENV="production"
+APP_BASE_URL="https://halalzi-erp.vercel.app"
+EMAIL_FROM="Halalzi ERP <onboarding@resend.dev>"
+RESEND_API_KEY="your-resend-api-key"
 ```
 
 Do not use local PGlite or local `.env` values in production.
+Do not commit real email API keys to Git. Store `RESEND_API_KEY` in Vercel environment variables.
 
 ## Pre-Deploy Local Checks
 Run:
@@ -92,7 +96,7 @@ Expected:
 
 ## Production Blockers Still Open
 - No email verification yet
-- No email delivery provider yet
+- No custom verified sender domain yet
 - No automated backup policy yet
 - No monitoring/alerting yet
 
@@ -103,7 +107,7 @@ Before sharing the app with real clients:
 2. Add a custom domain and verify HTTPS.
 3. Confirm Neon backup/restore settings and export process.
 4. Enable Vercel runtime monitoring and review error logs weekly.
-5. Upgrade basic in-memory API rate limiting to durable shared rate limiting if traffic or abuse risk grows.
+5. Verify a custom sender domain in Resend before real client onboarding.
 6. Follow `MIGRATIONS.md` to baseline production with `npm run prisma:baseline:production -- --apply`, then replace `prisma db push` with `prisma migrate deploy` once schema is no longer changing daily.
 7. Review audit logs after each demo and add export/filtering when client reporting requires it.
 8. Document client onboarding/offboarding steps.

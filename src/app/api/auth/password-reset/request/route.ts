@@ -3,6 +3,10 @@ import { z } from "zod";
 
 import { AppError, errorResponse } from "@/lib/auth/auth-errors";
 import {
+  buildPasswordResetUrl,
+  sendPasswordResetEmail,
+} from "@/lib/email/resend";
+import {
   createPasswordResetToken,
   hashPasswordResetToken,
   passwordResetExpiry,
@@ -57,6 +61,7 @@ export async function POST(request: Request) {
 
     const resetToken = createPasswordResetToken();
     const tokenHash = hashPasswordResetToken(resetToken);
+    let emailDelivered = false;
 
     await prisma.$transaction(async (tx) => {
       await tx.passwordResetToken.updateMany({
@@ -78,6 +83,17 @@ export async function POST(request: Request) {
       });
     });
 
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetUrl: buildPasswordResetUrl(resetToken),
+      });
+      emailDelivered = true;
+    } catch (emailError) {
+      console.error("Password reset email delivery failed", emailError);
+    }
+
     await recordAuditLog({
       companyId: user.companyId,
       userId: user.id,
@@ -87,6 +103,7 @@ export async function POST(request: Request) {
       summary: `Password reset requested for ${user.name}.`,
       metadata: {
         email: user.email,
+        emailDelivered,
       },
     });
 
