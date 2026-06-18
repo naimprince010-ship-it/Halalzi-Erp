@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
+import { downloadCsvExport } from "@/lib/export/export-client";
 
 type SalesOrderStatus = "draft" | "confirmed" | "cancelled" | "completed";
 
@@ -176,6 +177,8 @@ export default function SalesDashboardPage() {
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const canReadSales = currentUser?.permissions.includes("sales.read") ?? false;
   const canCreateSales = currentUser?.permissions.includes("sales.create") ?? false;
@@ -195,6 +198,19 @@ export default function SalesDashboardPage() {
     () => products.filter((product) => product.status === "active"),
     [products],
   );
+
+  async function handleExport() {
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      await downloadCsvExport("/api/exports/sales-orders");
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function loadSalesOrders() {
     setOrdersLoading(true);
@@ -551,7 +567,19 @@ export default function SalesDashboardPage() {
                   tenant-scoped API actions.
                 </p>
               </div>
+              <div className="hero-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleExport}
+                  disabled={exporting}
+                >
+                  {exporting ? "Exporting…" : "Export CSV"}
+                </button>
+              </div>
             </section>
+
+            {exportError ? <div className="form-error">{exportError}</div> : null}
 
             {createError ? <div className="form-error">{createError}</div> : null}
             {createSuccess ? <div className="form-success">{createSuccess}</div> : null}
@@ -940,5 +968,4 @@ export default function SalesDashboardPage() {
     </main>
   );
 }
-
 

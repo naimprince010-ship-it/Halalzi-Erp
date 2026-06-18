@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
+import { downloadCsvExport } from "@/lib/export/export-client";
 
 type AuditLog = {
   id: string;
@@ -60,6 +61,7 @@ export default function AuditDashboardPage() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const canReadAudit = currentUser?.permissions.includes("audit.read") ?? false;
@@ -123,6 +125,19 @@ export default function AuditDashboardPage() {
       router.refresh();
     } catch {
       setError("Could not log out. Please try again.");
+    }
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    setError(null);
+
+    try {
+      await downloadCsvExport("/api/exports/audit-logs");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not export audit logs.");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -223,9 +238,14 @@ export default function AuditDashboardPage() {
                   <p className="eyebrow">Recent activity</p>
                   <h2>Last 100 events</h2>
                 </div>
-                <button className="secondary-button" type="button" onClick={loadAuditLogs} disabled={logsLoading}>
-                  {logsLoading ? "Refreshing..." : "Refresh"}
-                </button>
+                <div className="section-actions">
+                  <button className="secondary-button" type="button" onClick={handleExport} disabled={exporting}>
+                    {exporting ? "Exporting..." : "Export CSV"}
+                  </button>
+                  <button className="secondary-button" type="button" onClick={loadAuditLogs} disabled={logsLoading}>
+                    {logsLoading ? "Refreshing..." : "Refresh"}
+                  </button>
+                </div>
               </div>
 
               <div className="users-list">

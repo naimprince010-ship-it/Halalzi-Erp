@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
+import { downloadCsvExport } from "@/lib/export/export-client";
 
 type VendorStatus = "active" | "inactive" | "blocked";
 type PurchaseStatus = "draft" | "ordered" | "received" | "cancelled";
@@ -160,6 +161,8 @@ export default function ProcurementDashboardPage() {
   const [purchaseEditId, setPurchaseEditId] = useState<string | null>(null);
   const [purchaseEditForm, setPurchaseEditForm] = useState<PurchaseForm>(emptyPurchaseForm);
   const [busy, setBusy] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const canReadVendors = currentUser?.permissions.includes("vendors.read") ?? false;
   const canCreateVendors = currentUser?.permissions.includes("vendors.create") ?? false;
@@ -182,6 +185,19 @@ export default function ProcurementDashboardPage() {
   function clearMessages() {
     setError(null);
     setSuccess(null);
+  }
+
+  async function handleExportPurchaseOrders() {
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      await downloadCsvExport("/api/exports/purchase-orders");
+    } catch (caught) {
+      setExportError(caught instanceof Error ? caught.message : "Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   async function loadVendors() {
@@ -502,7 +518,21 @@ export default function ProcurementDashboardPage() {
                 <h2>Vendors and purchase receiving</h2>
                 <p>Manage suppliers, draft purchase orders, receive stock, and keep purchasing tenant scoped.</p>
               </div>
+              {canReadPurchases ? (
+                <div className="hero-actions">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={handleExportPurchaseOrders}
+                    disabled={exporting}
+                  >
+                    {exporting ? "Exporting…" : "Export purchase orders CSV"}
+                  </button>
+                </div>
+              ) : null}
             </section>
+
+            {exportError ? <div className="form-error">{exportError}</div> : null}
 
             {canReadVendors ? (
               <section className="procurement-section">

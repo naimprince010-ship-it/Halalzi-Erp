@@ -37,9 +37,16 @@ dev-server.log
 
 # local runtime data
 .pglite-data/
+.pglite-hal99/
 .codex-*.pid
 .hal*-verify*.mjs
 .hal*-verify*.json
+*-hal99.*.log
+
+# database dumps (keep backups out of git)
+*.dump
+*.sql.gz
+*.backup
 
 # vercel
 .vercel

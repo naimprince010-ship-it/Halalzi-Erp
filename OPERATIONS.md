@@ -66,6 +66,10 @@ Rollback rule:
 - Disable old demo users after client onboarding.
 - Use a unique admin per company.
 
+For the safe rotation workflow (reset-flow or operator-gated direct update,
+verification, and what never to commit), see `CREDENTIAL_ROTATION.md` and the
+helper `npm run rotate:admin`.
+
 ## Database Backup Policy
 Minimum MVP policy:
 
@@ -73,6 +77,10 @@ Minimum MVP policy:
 2. Before destructive maintenance, export database or verify a restore point.
 3. Keep a monthly backup verification note.
 4. Never run destructive SQL without checking `companyId` scope.
+
+For the full backup and restore verification workflow, the read-only restore
+verification helper (`npm run verify:restore`), and the production incident
+checklist, see `BACKUP_RESTORE.md`.
 
 ## Release Process
 Use `10-releases/HAL-79_CORE_ERP_MVP_RELEASE_CHECKLIST.md` as the Core ERP MVP release gate.
@@ -108,6 +116,9 @@ For login/API/database errors:
 4. Confirm Neon resource status is available.
 5. Run unauthenticated smoke checks.
 6. If data risk exists, pause client onboarding until root cause is known.
+
+For the full log-review workflow, error signatures, weekly checklist, and
+escalation path, see `MONITORING.md` (or run `npm run monitor:checklist`).
 
 ## Near-Term Hardening Tasks
 - Verify custom email sender domain in Resend.

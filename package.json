@@ -11,12 +11,17 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
+    "prisma:deploy:guarded": "node scripts/production-migrate-deploy.mjs",
     "prisma:baseline:production": "node scripts/resolve-production-baseline.mjs",
     "prisma:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "smoke:prod": "node scripts/production-smoke.mjs",
+    "verify:restore": "node scripts/verify-restore-branch.mjs",
+    "monitor:checklist": "node scripts/monitoring-checklist.mjs",
+    "rotate:admin": "node scripts/rotate-admin-credentials.mjs",
     "check:env": "node scripts/check-production-env.mjs",
-    "build:migrate": "prisma generate && prisma migrate deploy && next build",
+    "regression:hal99": "node scripts/hal99-final-regression.mjs",
+    "build:migrate": "prisma generate && node scripts/production-migrate-deploy.mjs && next build",
     "check": "npm run lint && npm run build:ci"
   },
   "dependencies": {

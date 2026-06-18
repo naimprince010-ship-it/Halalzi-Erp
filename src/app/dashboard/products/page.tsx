@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
+import { downloadCsvExport } from "@/lib/export/export-client";
 
 type ProductStatus = "active" | "inactive";
 
@@ -99,6 +100,8 @@ export default function ProductsDashboardPage() {
   const [editSuccess, setEditSuccess] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [archiveSuccess, setArchiveSuccess] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [archivingProductId, setArchivingProductId] = useState<string | null>(null);
@@ -135,6 +138,19 @@ export default function ProductsDashboardPage() {
 
     return navItems.filter((item) => currentUser.permissions.includes(item.permission));
   }, [currentUser]);
+
+  async function handleExport() {
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      await downloadCsvExport("/api/exports/products");
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function loadProducts() {
     setProductsLoading(true);
@@ -463,7 +479,19 @@ export default function ProductsDashboardPage() {
                   your company workspace.
                 </p>
               </div>
+              <div className="hero-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleExport}
+                  disabled={exporting}
+                >
+                  {exporting ? "Exporting…" : "Export CSV"}
+                </button>
+              </div>
             </section>
+
+            {exportError ? <div className="form-error">{exportError}</div> : null}
 
             {createError ? <div className="form-error">{createError}</div> : null}
             {createSuccess ? <div className="form-success">{createSuccess}</div> : null}
@@ -771,5 +799,4 @@ export default function ProductsDashboardPage() {
     </main>
   );
 }
-
 

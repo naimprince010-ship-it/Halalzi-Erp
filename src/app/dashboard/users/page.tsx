@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
+import { downloadCsvExport } from "@/lib/export/export-client";
 
 type UserRole = {
   id: string;
@@ -108,6 +109,21 @@ export default function UsersDashboardPage() {
   const [editForm, setEditForm] = useState({ name: "", email: "" });
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function handleExport() {
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      await downloadCsvExport("/api/exports/users");
+    } catch (caught) {
+      setExportError(caught instanceof Error ? caught.message : "Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function loadUsers() {
     setUsersLoading(true);
@@ -140,7 +156,7 @@ export default function UsersDashboardPage() {
         setAvailableRoles(payload.roles ?? []);
       }
     } catch {
-      // silently ignore — role selector will be empty
+      // silently ignore â€” role selector will be empty
     }
   }
 
@@ -498,7 +514,19 @@ export default function UsersDashboardPage() {
                   for administration.
                 </p>
               </div>
+              <div className="hero-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleExport}
+                  disabled={exporting}
+                >
+                  {exporting ? "Exporting…" : "Export CSV"}
+                </button>
+              </div>
             </section>
+
+            {exportError ? <div className="form-error">{exportError}</div> : null}
 
             {usersLoading ? (
               <section className="users-list" aria-label="Users list loading">
@@ -592,7 +620,7 @@ export default function UsersDashboardPage() {
                                 }))
                               }
                             >
-                              <option value="">Change role…</option>
+                              <option value="">Change roleâ€¦</option>
                               {availableRoles.map((r) => (
                                 <option key={r.id} value={r.id}>
                                   {r.name}
@@ -615,7 +643,7 @@ export default function UsersDashboardPage() {
                                 if (rid) handleRoleChange(user, rid);
                               }}
                             >
-                              {assigningRoleUserId === user.id ? "Assigning…" : "Assign"}
+                              {assigningRoleUserId === user.id ? "Assigningâ€¦" : "Assign"}
                             </button>
                           </>
                         ) : null}
@@ -679,5 +707,4 @@ export default function UsersDashboardPage() {
     </main>
   );
 }
-
 

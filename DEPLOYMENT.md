@@ -84,28 +84,48 @@ For local env checking, `npm run check:env` may warn about localhost. That is ex
 2. Copy its connection string.
 3. Add the string as `DATABASE_URL` in Vercel.
 4. Add `SESSION_SECRET` in Vercel.
-5. Apply Prisma schema:
+5. Apply the Prisma schema.
+
+The current Neon production database was first created with `prisma db push`,
+and the default `build` script still uses `prisma db push`. This is a bootstrap
+convenience only.
+
+### Migration deploy is the production target
+`prisma db push` must not remain the long-term production workflow: it keeps no
+migration history or review trail and can drop columns/data on diverging
+schemas. Move production to `prisma migrate deploy` in this order:
+
+1. Baseline the existing production database (HAL-93) from a trusted shell with
+   the production `DATABASE_URL`:
 
 ```powershell
-npx prisma db push
+npm run prisma:baseline:production -- --apply
 ```
 
-For later stable production releases, use migrations. See `MIGRATIONS.md` and the guarded helper command `npm run prisma:baseline:production -- --apply` before switching production because the current Neon database was first created with `prisma db push`.
+2. Confirm every migration is applied with no failures:
 
 ```powershell
-npx prisma migrate deploy
+npx prisma migrate status
 ```
+
+3. Only then switch the Vercel Build command to `npm run build:migrate` (see
+   `MIGRATIONS.md`). `build:migrate` runs a guarded `prisma migrate deploy` that
+   fails fast with clear guidance if the database has not been baselined.
+
+See `MIGRATIONS.md` for the full runbook.
 
 ## Vercel Setup
 If this `app` folder is pushed as the GitHub repo root:
 - Root directory: default
 - Install command: `npm install`
-- Build command: `npm run build`
+- Build command: `npm run build` (current, db push bootstrap) — switch to
+  `npm run build:migrate` only after the HAL-93 baseline is applied and verified.
 
 If `E:\ERP_AI_Project_NEW` is pushed as the GitHub repo root:
 - Root directory: `app`
 - Install command: `npm install`
-- Build command: `npm run build`
+- Build command: `npm run build` (current, db push bootstrap) — switch to
+  `npm run build:migrate` only after the HAL-93 baseline is applied and verified.
 
 ## Post-Deploy Smoke Test
 After deploy and after creating a production admin user:
@@ -132,9 +152,9 @@ Expected:
 ## Production Hardening Checklist
 Before sharing the app with real clients:
 
-1. Rotate demo/admin credentials.
+1. Rotate demo/admin credentials. See `CREDENTIAL_ROTATION.md` (use `npm run rotate:admin` to prepare a new password; never commit it).
 2. Add a custom domain and verify HTTPS.
-3. Confirm Neon backup/restore settings and export process.
+3. Confirm Neon backup/restore settings and export process. Verify restores are recoverable using `BACKUP_RESTORE.md` and `npm run verify:restore` (read-only, runs against a restore branch only).
 4. Enable Vercel runtime monitoring and review error logs weekly.
 5. Verify a custom sender domain in Resend before real client onboarding.
 6. Follow `MIGRATIONS.md` to baseline production with `npm run prisma:baseline:production -- --apply`, then replace `prisma db push` with `prisma migrate deploy` once schema is no longer changing daily.

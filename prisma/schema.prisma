@@ -289,6 +289,26 @@ model EmailVerificationToken {
   @@index([expiresAt])
 }
 
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
 model Vendor {
   id            String       @id @default(cuid())
   companyId     String
@@ -459,24 +479,4 @@ model Payable {
   @@index([companyId])
   @@index([status])
   @@index([purchaseOrderId])
-}
-
-model AuditLog {
-  id         String   @id @default(cuid())
-  companyId  String
-  userId     String?
-  action     String
-  entityType String
-  entityId   String?
-  summary    String
-  metadata   Json?
-  createdAt  DateTime @default(now())
-
-  company Company @relation(fields: [companyId], references: [id])
-  user    User?   @relation(fields: [userId], references: [id])
-
-  @@index([companyId])
-  @@index([userId])
-  @@index([entityType, entityId])
-  @@index([createdAt])
 }
