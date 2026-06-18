@@ -126,6 +126,11 @@ async function main() {
     add("admin login succeeds", login.response.status === 200 && Boolean(cookie), {
       status: login.response.status,
       hasCookie: Boolean(cookie),
+      code: login.body?.error?.code,
+      hint:
+        login.body?.error?.code === "EMAIL_NOT_VERIFIED"
+          ? "Admin email is not verified. Verify it before rotating credentials or sharing demos."
+          : undefined,
     });
 
     if (cookie) {

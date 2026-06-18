@@ -146,8 +146,8 @@ Expected:
 
 ## Production Blockers Still Open
 - No custom verified sender domain yet
-- No automated backup policy yet
-- No monitoring/alerting yet
+- Production migration baseline must be applied before switching to `build:migrate`.
+- Demo/admin credentials must be rotated before external demos.
 
 ## Production Hardening Checklist
 Before sharing the app with real clients:

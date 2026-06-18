@@ -39,6 +39,8 @@ into your password manager. Clear the terminal afterward
 No hash handling, lowest risk:
 
 1. Ensure the admin email can receive mail (Resend sender configured).
+   The admin email must also be verified because production login enforces
+   `emailVerifiedAt`.
 2. Go to `https://halalzi-erp.vercel.app/forgot-password`.
 3. Enter the admin email and submit.
 4. Open the reset link from the email and set the new password (the one you
@@ -66,29 +68,30 @@ environment variable (never printed). Do this only if Path A is unavailable.
    `--hash` prints only the bcrypt hash; the plaintext is never printed.
 
 2. Apply a single, scoped, parameterized update against production. Example with
-   `psql` using a bound parameter so the hash is not embedded in the SQL text in
+   `psql` using bound variables so the hash is not embedded in the SQL text in
    shell history (replace the email with the real admin email):
 
    ```powershell
    # BCRYPT_HASH is the value printed by the helper.
    psql "$env:DATABASE_URL" `
      -v ON_ERROR_STOP=1 `
+     -v email="admin@halalzi.local" `
      -v newhash="$env:BCRYPT_HASH" `
-     -c 'UPDATE "User" SET "passwordHash" = :''newhash'', "updatedAt" = now() WHERE email = :''email'';' `
-     -v email="admin@halalzi.local"
+     -c 'UPDATE "User" SET "passwordHash" = :''newhash'', "emailVerifiedAt" = COALESCE("emailVerifiedAt", now()), "updatedAt" = now() WHERE email = :''email'';'
    ```
 
    Notes:
    - Update exactly one row (scoped by `email`). Confirm `UPDATE 1`.
    - Never run an unscoped `UPDATE "User"`.
+   - This keeps the admin email verified after login enforcement.
    - Do not paste `DATABASE_URL` or the hash into shared logs.
 
 3. Invalidate existing admin sessions so the old login cannot continue:
 
    ```powershell
    psql "$env:DATABASE_URL" -v ON_ERROR_STOP=1 `
-     -c 'UPDATE "Session" SET "revokedAt" = now() WHERE "revokedAt" IS NULL AND "userId" = (SELECT id FROM "User" WHERE email = :''email'');' `
-     -v email="admin@halalzi.local"
+     -v email="admin@halalzi.local" `
+     -c 'UPDATE "Session" SET "revokedAt" = now() WHERE "revokedAt" IS NULL AND "userId" = (SELECT id FROM "User" WHERE email = :''email'');'
    ```
 
 ## Verify Rotation

@@ -36,17 +36,19 @@ Use a dedicated database only when a client requires separate infrastructure for
 
 ## Email Verification Rollout
 
-Email verification exists as a foundation but is not enforced at login yet. This avoids locking out existing production users while the sender domain is still being finalized.
+Email verification is enforced at login. Publicly registered users must verify
+their email address before they can sign in. Admin-created staff users are
+treated as verified during the MVP create-user flow until a full invite-email
+workflow is added.
 
-Before enforcing verified email at login:
+Before onboarding real clients:
 
 1. Verify the Resend sender domain.
 2. Confirm `EMAIL_FROM` uses the verified sender.
-3. Send verification emails to all existing admin users.
-4. Confirm the production admin account is verified.
+3. Confirm the production admin account email is verified.
+4. Send verification emails to any existing unverified admin users.
 5. Keep an emergency admin account available.
-6. Deploy enforcement behind a rollback-friendly code change.
-7. Run production smoke immediately after deployment.
+6. Run production smoke immediately after credential or email changes.
 
 Rollback rule:
 
@@ -122,8 +124,6 @@ escalation path, see `MONITORING.md` (or run `npm run monitor:checklist`).
 
 ## Near-Term Hardening Tasks
 - Verify custom email sender domain in Resend.
-- Enforce verified email at login only after existing production admins are verified.
 - Follow `MIGRATIONS.md` and run `npm run prisma:baseline:production -- --apply` against the production database, then replace build-time `prisma db push` with migration deploy once schema stabilizes.
 - Add authenticated preview smoke tests after a safe preview database strategy exists.
 - Add audit log filters/export after real client reporting needs are known.
-- Upgrade basic in-memory rate limiting to durable shared rate limiting when usage grows beyond MVP demo traffic.
