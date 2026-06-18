@@ -94,6 +94,7 @@ export async function POST(request: Request) {
           companyId: scope.companyId,
           name: input.name,
           email: input.email,
+          emailVerifiedAt: new Date(),
           passwordHash,
           status: "active",
         },

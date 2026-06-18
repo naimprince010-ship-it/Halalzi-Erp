@@ -6,6 +6,7 @@ export type AuthErrorCode =
   | "UNAUTHENTICATED"
   | "FORBIDDEN"
   | "EMAIL_ALREADY_EXISTS"
+  | "EMAIL_NOT_VERIFIED"
   | "COMPANY_SUSPENDED"
   | "USER_DISABLED"
   | "INTERNAL_SERVER_ERROR";
@@ -59,6 +60,14 @@ export function forbidden(message = "You do not have permission to perform this 
 
 export function userDisabled() {
   return new AppError("USER_DISABLED", "Your account is disabled.", 403);
+}
+
+export function emailNotVerified() {
+  return new AppError(
+    "EMAIL_NOT_VERIFIED",
+    "Please verify your email address before signing in.",
+    403,
+  );
 }
 
 export function companySuspended() {

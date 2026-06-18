@@ -95,6 +95,25 @@ async function registerCompanyAdmin(label) {
   return { email, password, register, cookie };
 }
 
+async function verifyEmailWithSession(cookie) {
+  const requestVerification = await request("/api/auth/email-verification/request", {
+    method: "POST",
+    headers: { cookie },
+  });
+  const token = requestVerification.body?.devVerificationToken;
+
+  if (!token) {
+    return { requestVerification, confirmVerification: null };
+  }
+
+  const confirmVerification = await request("/api/auth/email-verification/confirm", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+
+  return { requestVerification, confirmVerification };
+}
+
 function mustJsonObject(body) {
   return !!body && typeof body === "object" && !Array.isArray(body);
 }
@@ -190,6 +209,43 @@ async function main() {
   }
 
   const adminHeaders = { cookie: adminA.cookie };
+
+  const unverifiedAdminLogin = await request("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email: adminA.email, password: adminA.password }),
+  });
+  add(
+    "unverified email login is blocked",
+    statusOf(unverifiedAdminLogin) === 403 &&
+      unverifiedAdminLogin.body?.error?.code === "EMAIL_NOT_VERIFIED",
+    {
+      status: statusOf(unverifiedAdminLogin),
+      code: unverifiedAdminLogin.body?.error?.code,
+    },
+  );
+
+  const adminVerification = await verifyEmailWithSession(adminA.cookie);
+  const adminVerificationRequestStatus = statusOf(adminVerification.requestVerification);
+  const adminVerificationConfirmStatus = adminVerification.confirmVerification
+    ? statusOf(adminVerification.confirmVerification)
+    : null;
+  add(
+    "email verification confirm works",
+    adminVerificationRequestStatus === 200 && adminVerificationConfirmStatus === 200,
+    {
+      requestStatus: adminVerificationRequestStatus,
+      confirmStatus: adminVerificationConfirmStatus,
+    },
+  );
+
+  const verifiedAdminLogin = await request("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email: adminA.email, password: adminA.password }),
+  });
+  add("verified email login works", statusOf(verifiedAdminLogin) === 200, {
+    status: statusOf(verifiedAdminLogin),
+  });
+
   const adminMe = await request("/api/auth/me", { headers: adminHeaders });
   add("admin auth/me returns safe payload", statusOf(adminMe) === 200 && !hasUnsafeKeys(adminMe.body), {
     status: statusOf(adminMe),

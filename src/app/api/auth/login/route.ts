@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { companySuspended, errorResponse, invalidCredentials, userDisabled } from "@/lib/auth/auth-errors";
+import {
+  companySuspended,
+  emailNotVerified,
+  errorResponse,
+  invalidCredentials,
+  userDisabled,
+} from "@/lib/auth/auth-errors";
 import { validateLoginInput } from "@/lib/auth/auth-validation";
 import { toCurrentUserPayload } from "@/lib/auth/current-user";
 import { verifyPassword } from "@/lib/auth/password";
@@ -12,6 +18,7 @@ const userLoginSelect = {
   id: true,
   name: true,
   email: true,
+  emailVerifiedAt: true,
   passwordHash: true,
   status: true,
   company: {
@@ -63,6 +70,10 @@ export async function POST(request: Request) {
 
     if (user.status !== "active") {
       throw userDisabled();
+    }
+
+    if (!user.emailVerifiedAt) {
+      throw emailNotVerified();
     }
 
     if (user.company.status !== "active") {
