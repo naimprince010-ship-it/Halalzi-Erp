@@ -77,6 +77,11 @@ export const DEFAULT_PERMISSIONS = [
     action: "payables.update",
     description: "Update payables",
   },
+  { key: "crm.read", module: "crm", action: "read", description: "View CRM leads and customers" },
+  { key: "crm.create", module: "crm", action: "create", description: "Create CRM leads and customers" },
+  { key: "crm.update", module: "crm", action: "update", description: "Update CRM leads and customers" },
+  { key: "crm.convert", module: "crm", action: "convert", description: "Convert leads to customers" },
+  { key: "crm.archive", module: "crm", action: "archive", description: "Archive CRM leads and customers" },
   { key: "audit.read", module: "audit", action: "read", description: "View audit logs" },
 ] as const;
 

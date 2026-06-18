@@ -69,6 +69,11 @@ const ADMIN_PERMISSIONS: PermissionKey[] = [
   "finance.journals.cancel",
   "finance.receivables.update",
   "finance.payables.update",
+  "crm.read",
+  "crm.create",
+  "crm.update",
+  "crm.convert",
+  "crm.archive",
   "audit.read",
 ];
 
@@ -81,6 +86,9 @@ const STAFF_PERMISSIONS: PermissionKey[] = [
   "vendors.read",
   "purchases.read",
   "finance.read",
+  "crm.read",
+  "crm.create",
+  "crm.update",
 ];
 
 export async function ensurePermissions(client: RbacClient) {

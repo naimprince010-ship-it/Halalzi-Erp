@@ -81,6 +81,38 @@ enum SettlementStatus {
   cancelled
 }
 
+enum LeadStage {
+  new
+  contacted
+  qualified
+  proposal
+  won
+  lost
+}
+
+enum LeadStatus {
+  active
+  converted
+  archived
+}
+
+enum CustomerStatus {
+  active
+  inactive
+  archived
+}
+
+enum LeadActivityType {
+  call
+  email
+  whatsapp
+  meeting
+  note
+  stage_change
+  conversion
+  archive
+}
+
 model Company {
   id              String        @id @default(cuid())
   name            String
@@ -102,6 +134,9 @@ model Company {
   receivables Receivable[]
   payables Payable[]
   auditLogs AuditLog[]
+  leads Lead[]
+  customerContacts CustomerContact[]
+  leadActivities LeadActivity[]
 
   @@index([status])
 }
@@ -192,6 +227,7 @@ model User {
   auditLogs AuditLog[]
   passwordResetTokens PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  leadActivities LeadActivity[]
 
   @@index([companyId])
   @@index([status])
@@ -479,4 +515,80 @@ model Payable {
   @@index([companyId])
   @@index([status])
   @@index([purchaseOrderId])
+}
+
+model Lead {
+  id                  String      @id @default(cuid())
+  companyId           String
+  name                String
+  companyName         String?
+  email               String?
+  phone               String?
+  source              String?
+  stage               LeadStage   @default(new)
+  status              LeadStatus  @default(active)
+  estimatedValue      Decimal?    @db.Decimal(12, 2)
+  expectedCloseDate   DateTime?
+  nextFollowUpAt      DateTime?
+  notes               String?
+  convertedCustomerId String?
+  convertedAt         DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  company           Company          @relation(fields: [companyId], references: [id])
+  convertedCustomer CustomerContact? @relation("LeadConvertedCustomer", fields: [convertedCustomerId], references: [id])
+  activities        LeadActivity[]
+
+  @@index([companyId])
+  @@index([stage])
+  @@index([status])
+  @@index([nextFollowUpAt])
+  @@index([companyId, stage])
+  @@index([companyId, status])
+  @@index([companyId, phone])
+  @@index([companyId, email])
+}
+
+model CustomerContact {
+  id          String         @id @default(cuid())
+  companyId   String
+  name        String
+  companyName String?
+  email       String?
+  phone       String?
+  address     String?
+  notes       String?
+  status      CustomerStatus @default(active)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  company        Company @relation(fields: [companyId], references: [id])
+  convertedLeads Lead[]  @relation("LeadConvertedCustomer")
+
+  @@index([companyId])
+  @@index([status])
+  @@index([companyId, name])
+  @@index([companyId, phone])
+  @@index([companyId, email])
+}
+
+model LeadActivity {
+  id        String           @id @default(cuid())
+  companyId String
+  leadId    String
+  userId    String?
+  type      LeadActivityType
+  note      String
+  createdAt DateTime         @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  lead    Lead    @relation(fields: [leadId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([leadId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
 }
