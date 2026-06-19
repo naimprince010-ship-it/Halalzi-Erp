@@ -82,6 +82,15 @@ export const DEFAULT_PERMISSIONS = [
   { key: "crm.update", module: "crm", action: "update", description: "Update CRM leads and customers" },
   { key: "crm.convert", module: "crm", action: "convert", description: "Convert leads to customers" },
   { key: "crm.archive", module: "crm", action: "archive", description: "Archive CRM leads and customers" },
+  { key: "crm.deals.read", module: "crm", action: "deals.read", description: "View CRM deals" },
+  { key: "crm.deals.create", module: "crm", action: "deals.create", description: "Create CRM deals" },
+  { key: "crm.deals.update", module: "crm", action: "deals.update", description: "Update CRM deals" },
+  { key: "crm.deals.close", module: "crm", action: "deals.close", description: "Close CRM deals as won or lost" },
+  { key: "crm.tasks.read", module: "crm", action: "tasks.read", description: "View CRM sales tasks" },
+  { key: "crm.tasks.create", module: "crm", action: "tasks.create", description: "Create CRM sales tasks" },
+  { key: "crm.tasks.update", module: "crm", action: "tasks.update", description: "Update CRM sales tasks" },
+  { key: "crm.pipeline.read", module: "crm", action: "pipeline.read", description: "View CRM pipeline stages" },
+  { key: "crm.pipeline.update", module: "crm", action: "pipeline.update", description: "Configure CRM pipeline stages" },
   { key: "audit.read", module: "audit", action: "read", description: "View audit logs" },
 ] as const;
 

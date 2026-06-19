@@ -74,6 +74,15 @@ const ADMIN_PERMISSIONS: PermissionKey[] = [
   "crm.update",
   "crm.convert",
   "crm.archive",
+  "crm.deals.read",
+  "crm.deals.create",
+  "crm.deals.update",
+  "crm.deals.close",
+  "crm.tasks.read",
+  "crm.tasks.create",
+  "crm.tasks.update",
+  "crm.pipeline.read",
+  "crm.pipeline.update",
   "audit.read",
 ];
 
@@ -89,6 +98,13 @@ const STAFF_PERMISSIONS: PermissionKey[] = [
   "crm.read",
   "crm.create",
   "crm.update",
+  "crm.deals.read",
+  "crm.deals.create",
+  "crm.deals.update",
+  "crm.tasks.read",
+  "crm.tasks.create",
+  "crm.tasks.update",
+  "crm.pipeline.read",
 ];
 
 export async function ensurePermissions(client: RbacClient) {

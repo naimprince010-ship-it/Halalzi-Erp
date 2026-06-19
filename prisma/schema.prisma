@@ -113,6 +113,28 @@ enum LeadActivityType {
   archive
 }
 
+enum DealStatus {
+  active
+  won
+  lost
+  archived
+  cancelled
+}
+
+enum SalesTaskStatus {
+  pending
+  in_progress
+  completed
+  cancelled
+}
+
+enum SalesTaskPriority {
+  low
+  medium
+  high
+  urgent
+}
+
 model Company {
   id              String        @id @default(cuid())
   name            String
@@ -123,20 +145,24 @@ model Company {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  users User[]
-  roles Role[]
-  products Product[]
-  salesOrders SalesOrder[]
-  vendors Vendor[]
-  purchaseOrders PurchaseOrder[]
-  financeAccounts FinanceAccount[]
-  journalEntries JournalEntry[]
-  receivables Receivable[]
-  payables Payable[]
-  auditLogs AuditLog[]
-  leads Lead[]
+  users            User[]
+  roles            Role[]
+  products         Product[]
+  salesOrders      SalesOrder[]
+  vendors          Vendor[]
+  purchaseOrders   PurchaseOrder[]
+  financeAccounts  FinanceAccount[]
+  journalEntries   JournalEntry[]
+  receivables      Receivable[]
+  payables         Payable[]
+  auditLogs        AuditLog[]
+  leads            Lead[]
   customerContacts CustomerContact[]
-  leadActivities LeadActivity[]
+  leadActivities   LeadActivity[]
+  pipelineStages   PipelineStage[]
+  deals            Deal[]
+  dealStageHistory DealStageHistory[]
+  salesTasks       SalesTask[]
 
   @@index([status])
 }
@@ -154,8 +180,8 @@ model Product {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
-  salesOrderItems SalesOrderItem[]
+  company            Company             @relation(fields: [companyId], references: [id])
+  salesOrderItems    SalesOrderItem[]
   purchaseOrderItems PurchaseOrderItem[]
 
   @@unique([companyId, sku])
@@ -183,7 +209,7 @@ model SalesOrder {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  company Company         @relation(fields: [companyId], references: [id])
+  company Company          @relation(fields: [companyId], references: [id])
   items   SalesOrderItem[]
 
   @@unique([companyId, orderNumber])
@@ -193,15 +219,15 @@ model SalesOrder {
 }
 
 model SalesOrderItem {
-  id                 String   @id @default(cuid())
-  salesOrderId       String
-  productId          String
+  id                  String   @id @default(cuid())
+  salesOrderId        String
+  productId           String
   productNameSnapshot String
   productSkuSnapshot  String
-  quantity           Int
-  unitPrice          Decimal  @db.Decimal(12, 2)
-  lineTotal          Decimal  @db.Decimal(12, 2)
-  createdAt          DateTime @default(now())
+  quantity            Int
+  unitPrice           Decimal  @db.Decimal(12, 2)
+  lineTotal           Decimal  @db.Decimal(12, 2)
+  createdAt           DateTime @default(now())
 
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
   product    Product    @relation(fields: [productId], references: [id])
@@ -211,23 +237,26 @@ model SalesOrderItem {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  companyId    String
-  name         String
-  email        String     @unique
+  id              String     @id @default(cuid())
+  companyId       String
+  name            String
+  email           String     @unique
   emailVerifiedAt DateTime?
-  passwordHash String
-  status       UserStatus @default(active)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  passwordHash    String
+  status          UserStatus @default(active)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  company   Company   @relation(fields: [companyId], references: [id])
-  userRoles UserRole[]
-  sessions  Session[]
-  auditLogs AuditLog[]
-  passwordResetTokens PasswordResetToken[]
+  company                 Company                  @relation(fields: [companyId], references: [id])
+  userRoles               UserRole[]
+  sessions                Session[]
+  auditLogs               AuditLog[]
+  passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
-  leadActivities LeadActivity[]
+  leadActivities          LeadActivity[]
+  assignedSalesTasks      SalesTask[]              @relation("SalesTaskAssignee")
+  createdSalesTasks       SalesTask[]              @relation("SalesTaskCreator")
+  changedDealStages       DealStageHistory[]       @relation("DealStageChangedBy")
 
   @@index([companyId])
   @@index([status])
@@ -359,7 +388,7 @@ model Vendor {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  company       Company         @relation(fields: [companyId], references: [id])
+  company        Company         @relation(fields: [companyId], references: [id])
   purchaseOrders PurchaseOrder[]
 
   @@unique([companyId, code])
@@ -369,26 +398,26 @@ model Vendor {
 }
 
 model PurchaseOrder {
-  id                   String              @id @default(cuid())
-  companyId            String
-  vendorId             String
-  purchaseOrderNumber  String
-  vendorNameSnapshot   String
-  vendorPhoneSnapshot  String?
-  vendorEmailSnapshot  String?
-  status               PurchaseOrderStatus @default(draft)
-  subtotal             Decimal             @db.Decimal(12, 2)
-  discountAmount       Decimal             @default(0) @db.Decimal(12, 2)
-  totalAmount          Decimal             @db.Decimal(12, 2)
-  notes                String?
-  orderedAt            DateTime?
-  receivedAt           DateTime?
-  cancelledAt          DateTime?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  id                  String              @id @default(cuid())
+  companyId           String
+  vendorId            String
+  purchaseOrderNumber String
+  vendorNameSnapshot  String
+  vendorPhoneSnapshot String?
+  vendorEmailSnapshot String?
+  status              PurchaseOrderStatus @default(draft)
+  subtotal            Decimal             @db.Decimal(12, 2)
+  discountAmount      Decimal             @default(0) @db.Decimal(12, 2)
+  totalAmount         Decimal             @db.Decimal(12, 2)
+  notes               String?
+  orderedAt           DateTime?
+  receivedAt          DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
-  company Company           @relation(fields: [companyId], references: [id])
-  vendor  Vendor            @relation(fields: [vendorId], references: [id])
+  company Company             @relation(fields: [companyId], references: [id])
+  vendor  Vendor              @relation(fields: [vendorId], references: [id])
   items   PurchaseOrderItem[]
 
   @@unique([companyId, purchaseOrderNumber])
@@ -518,27 +547,29 @@ model Payable {
 }
 
 model Lead {
-  id                  String      @id @default(cuid())
+  id                  String     @id @default(cuid())
   companyId           String
   name                String
   companyName         String?
   email               String?
   phone               String?
   source              String?
-  stage               LeadStage   @default(new)
-  status              LeadStatus  @default(active)
-  estimatedValue      Decimal?    @db.Decimal(12, 2)
+  stage               LeadStage  @default(new)
+  status              LeadStatus @default(active)
+  estimatedValue      Decimal?   @db.Decimal(12, 2)
   expectedCloseDate   DateTime?
   nextFollowUpAt      DateTime?
   notes               String?
   convertedCustomerId String?
   convertedAt         DateTime?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   company           Company          @relation(fields: [companyId], references: [id])
   convertedCustomer CustomerContact? @relation("LeadConvertedCustomer", fields: [convertedCustomerId], references: [id])
   activities        LeadActivity[]
+  deals             Deal[]
+  salesTasks        SalesTask[]
 
   @@index([companyId])
   @@index([stage])
@@ -563,8 +594,10 @@ model CustomerContact {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  company        Company @relation(fields: [companyId], references: [id])
-  convertedLeads Lead[]  @relation("LeadConvertedCustomer")
+  company        Company     @relation(fields: [companyId], references: [id])
+  convertedLeads Lead[]      @relation("LeadConvertedCustomer")
+  deals          Deal[]
+  salesTasks     SalesTask[]
 
   @@index([companyId])
   @@index([status])
@@ -591,4 +624,121 @@ model LeadActivity {
   @@index([userId])
   @@index([type])
   @@index([createdAt])
+}
+
+model PipelineStage {
+  id          String   @id @default(cuid())
+  companyId   String
+  key         String
+  name        String
+  sortOrder   Int
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company          Company            @relation(fields: [companyId], references: [id])
+  activeDeals      Deal[]
+  fromStageHistory DealStageHistory[] @relation("DealStageFrom")
+  toStageHistory   DealStageHistory[] @relation("DealStageTo")
+
+  @@unique([companyId, key])
+  @@index([companyId])
+  @@index([companyId, sortOrder])
+  @@index([isActive])
+}
+
+model Deal {
+  id                String     @id @default(cuid())
+  companyId         String
+  name              String
+  description       String?
+  value             Decimal?   @db.Decimal(12, 2)
+  probability       Int        @default(50)
+  expectedCloseDate DateTime?
+  currentStageId    String
+  leadId            String?
+  customerContactId String?
+  status            DealStatus @default(active)
+  wonAt             DateTime?
+  lostAt            DateTime?
+  lostReason        String?
+  archivedAt        DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  company         Company            @relation(fields: [companyId], references: [id])
+  currentStage    PipelineStage      @relation(fields: [currentStageId], references: [id])
+  lead            Lead?              @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  customerContact CustomerContact?   @relation(fields: [customerContactId], references: [id], onDelete: SetNull)
+  stageHistory    DealStageHistory[]
+  salesTasks      SalesTask[]
+
+  @@index([companyId])
+  @@index([currentStageId])
+  @@index([status])
+  @@index([expectedCloseDate])
+  @@index([leadId])
+  @@index([customerContactId])
+  @@index([companyId, status])
+}
+
+model DealStageHistory {
+  id              String   @id @default(cuid())
+  companyId       String
+  dealId          String
+  fromStageId     String?
+  toStageId       String
+  changedByUserId String?
+  probability     Int?
+  value           Decimal? @db.Decimal(12, 2)
+  note            String?
+  createdAt       DateTime @default(now())
+
+  company       Company        @relation(fields: [companyId], references: [id])
+  deal          Deal           @relation(fields: [dealId], references: [id])
+  fromStage     PipelineStage? @relation("DealStageFrom", fields: [fromStageId], references: [id], onDelete: SetNull)
+  toStage       PipelineStage  @relation("DealStageTo", fields: [toStageId], references: [id])
+  changedByUser User?          @relation("DealStageChangedBy", fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([dealId])
+  @@index([toStageId])
+  @@index([changedByUserId])
+  @@index([createdAt])
+}
+
+model SalesTask {
+  id                String            @id @default(cuid())
+  companyId         String
+  dealId            String?
+  leadId            String?
+  customerContactId String?
+  assignedToUserId  String?
+  createdByUserId   String?
+  title             String
+  description       String?
+  dueAt             DateTime?
+  completedAt       DateTime?
+  status            SalesTaskStatus   @default(pending)
+  priority          SalesTaskPriority @default(medium)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  deal            Deal?            @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  lead            Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  customerContact CustomerContact? @relation(fields: [customerContactId], references: [id], onDelete: SetNull)
+  assignedToUser  User?            @relation("SalesTaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdByUser   User?            @relation("SalesTaskCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([dealId])
+  @@index([leadId])
+  @@index([customerContactId])
+  @@index([assignedToUserId])
+  @@index([createdByUserId])
+  @@index([dueAt])
+  @@index([status])
+  @@index([companyId, status])
 }
