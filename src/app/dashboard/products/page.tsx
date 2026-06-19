@@ -41,6 +41,7 @@ const navItems = [
   { label: "Company", permission: "company.read", href: "/dashboard/company" },
   { label: "Products", permission: "products.read", href: "/dashboard/products" },
   { label: "Sales", permission: "sales.read", href: "/dashboard/sales" },
+  { label: "CRM", permission: "crm.read", href: "/dashboard/crm" },
   { label: "Procurement", permission: "purchases.read", href: "/dashboard/procurement" },
   { label: "Finance", permission: "finance.read", href: "/dashboard/finance" },
   { label: "Audit", permission: "audit.read", href: "/dashboard/audit" },
