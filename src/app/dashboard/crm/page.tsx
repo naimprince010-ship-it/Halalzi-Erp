@@ -5,10 +5,22 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
 
-type LeadStage = "new" | "contacted" | "qualified" | "proposal" | "won" | "lost";
-type LeadStatus = "active" | "converted" | "archived";
-type CustomerStatus = "active" | "inactive" | "archived";
-type ActivityType = "call" | "email" | "whatsapp" | "meeting" | "note" | "stage_change" | "conversion" | "archive";
+type CrmTab = "overview" | "pipeline" | "deals" | "tasks" | "customers";
+type DealStatus = "active" | "won" | "lost" | "archived" | "cancelled";
+type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
+type TaskPriority = "low" | "medium" | "high" | "urgent";
+
+type ApiErrorPayload = { error?: { code?: string; message?: string } };
+
+type PipelineStage = {
+  id: string;
+  key: string;
+  name: string;
+  sortOrder: number;
+  description: string | null;
+  isActive: boolean;
+  _count?: { activeDeals: number };
+};
 
 type Customer = {
   id: string;
@@ -16,9 +28,7 @@ type Customer = {
   companyName: string | null;
   email: string | null;
   phone: string | null;
-  address?: string | null;
-  notes?: string | null;
-  status: CustomerStatus;
+  status: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -29,35 +39,64 @@ type Lead = {
   companyName: string | null;
   email: string | null;
   phone: string | null;
-  source: string | null;
-  stage: LeadStage;
-  status: LeadStatus;
-  estimatedValue: number | string | null;
+  stage: string;
+  status: string;
+};
+
+type Deal = {
+  id: string;
+  name: string;
+  description: string | null;
+  value: number | string | null;
+  probability: number;
   expectedCloseDate: string | null;
-  nextFollowUpAt: string | null;
-  notes: string | null;
-  convertedCustomerId: string | null;
-  convertedAt: string | null;
+  currentStageId: string;
+  leadId: string | null;
+  customerContactId: string | null;
+  status: DealStatus;
+  wonAt: string | null;
+  lostAt: string | null;
+  lostReason: string | null;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  convertedCustomer?: Pick<Customer, "id" | "name" | "companyName" | "email" | "phone" | "status"> | null;
+  currentStage?: PipelineStage | null;
+  lead?: Pick<Lead, "id" | "name" | "companyName" | "email" | "phone" | "stage" | "status"> | null;
+  customerContact?: Pick<Customer, "id" | "name" | "companyName" | "email" | "phone" | "status"> | null;
 };
 
-type LeadActivity = {
+type SalesTask = {
   id: string;
-  leadId: string;
-  userId: string | null;
-  type: ActivityType;
-  note: string;
+  dealId: string | null;
+  leadId: string | null;
+  customerContactId: string | null;
+  assignedToUserId: string | null;
+  title: string;
+  description: string | null;
+  dueAt: string | null;
+  completedAt: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
   createdAt: string;
-  user: { id: string; name: string; email: string } | null;
+  updatedAt: string;
+  deal?: Pick<Deal, "id" | "name" | "status"> | null;
+  lead?: Pick<Lead, "id" | "name" | "status"> | null;
+  customerContact?: Pick<Customer, "id" | "name" | "status"> | null;
+  assignedToUser?: { id: string; name: string; email: string } | null;
 };
 
-type ApiErrorPayload = {
-  error?: {
-    code?: string;
-    message?: string;
-  };
+type CrmSummary = {
+  dealCounts?: Array<{ status: DealStatus; _count: { _all: number } }>;
+  activeDealValue?: number | string;
+  taskCounts?: Array<{ status: TaskStatus; _count: { _all: number } }>;
+  overdueTasks?: number;
+  stages?: PipelineStage[];
+};
+
+type Customer360 = {
+  customer: Customer;
+  deals: Deal[];
+  tasks: SalesTask[];
 };
 
 const navItems = [
@@ -74,51 +113,30 @@ const navItems = [
   { label: "Profile", permission: "profile.read", href: "/dashboard/profile" },
 ];
 
-const emptyLeadForm = {
+const emptyDealForm = {
   name: "",
-  companyName: "",
-  email: "",
-  phone: "",
-  source: "",
-  stage: "new" as LeadStage,
-  estimatedValue: "",
+  description: "",
+  value: "",
+  probability: "50",
   expectedCloseDate: "",
-  nextFollowUpAt: "",
-  notes: "",
+  currentStageId: "",
+  leadId: "",
+  customerContactId: "",
 };
 
-const emptyCustomerForm = {
-  name: "",
-  companyName: "",
-  email: "",
-  phone: "",
-  address: "",
-  notes: "",
-  status: "active" as Exclude<CustomerStatus, "archived">,
+const emptyTaskForm = {
+  title: "",
+  description: "",
+  dueAt: "",
+  status: "pending" as TaskStatus,
+  priority: "medium" as TaskPriority,
+  dealId: "",
+  leadId: "",
+  customerContactId: "",
 };
 
-function formatDate(value: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatMoney(value: number | string | null) {
-  if (value === null || value === "") return "-";
+function formatMoney(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") return "-";
   const amount = Number(value);
   if (!Number.isFinite(amount)) return "-";
   return amount.toLocaleString(undefined, {
@@ -129,49 +147,62 @@ function formatMoney(value: number | string | null) {
   });
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
+}
+
 function normalizeError(payload: ApiErrorPayload, fallback: string) {
   return payload.error?.message ?? fallback;
 }
 
-function leadPayload(form: typeof emptyLeadForm) {
+function hasPermission(user: CurrentUserResponse | null, permission: string) {
+  return user?.permissions.includes(permission) ?? false;
+}
+
+async function readJson<T>(url: string, fallback: string): Promise<T> {
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => ({}))) as T & ApiErrorPayload;
+  if (!response.ok) throw new Error(normalizeError(payload, fallback));
+  return payload;
+}
+
+async function writeJson<T>(url: string, method: string, body?: unknown, fallback = "Request failed. Please try again.") {
+  const response = await fetch(url, {
+    method,
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const payload = (await response.json().catch(() => ({}))) as T & ApiErrorPayload;
+  if (!response.ok) throw new Error(normalizeError(payload, fallback));
+  return payload;
+}
+
+function dealPayload(form: typeof emptyDealForm) {
   return {
     name: form.name.trim(),
-    companyName: form.companyName.trim() || undefined,
-    email: form.email.trim() || undefined,
-    phone: form.phone.trim() || undefined,
-    source: form.source.trim() || undefined,
-    stage: form.stage,
-    estimatedValue: form.estimatedValue.trim() ? Number(form.estimatedValue) : undefined,
+    description: form.description.trim() || undefined,
+    value: form.value.trim() ? Number(form.value) : undefined,
+    probability: Number.parseInt(form.probability, 10),
     expectedCloseDate: form.expectedCloseDate || undefined,
-    nextFollowUpAt: form.nextFollowUpAt || undefined,
-    notes: form.notes.trim() || undefined,
+    currentStageId: form.currentStageId || undefined,
+    leadId: form.leadId || undefined,
+    customerContactId: form.customerContactId || undefined,
   };
 }
 
-function customerPayload(form: typeof emptyCustomerForm) {
+function taskPayload(form: typeof emptyTaskForm) {
   return {
-    name: form.name.trim(),
-    companyName: form.companyName.trim() || undefined,
-    email: form.email.trim() || undefined,
-    phone: form.phone.trim() || undefined,
-    address: form.address.trim() || undefined,
-    notes: form.notes.trim() || undefined,
+    title: form.title.trim(),
+    description: form.description.trim() || undefined,
+    dueAt: form.dueAt || undefined,
     status: form.status,
-  };
-}
-
-function formFromLead(lead: Lead) {
-  return {
-    name: lead.name,
-    companyName: lead.companyName ?? "",
-    email: lead.email ?? "",
-    phone: lead.phone ?? "",
-    source: lead.source ?? "",
-    stage: lead.stage,
-    estimatedValue: lead.estimatedValue === null ? "" : String(lead.estimatedValue),
-    expectedCloseDate: lead.expectedCloseDate ? lead.expectedCloseDate.slice(0, 10) : "",
-    nextFollowUpAt: lead.nextFollowUpAt ? lead.nextFollowUpAt.slice(0, 10) : "",
-    notes: lead.notes ?? "",
+    priority: form.priority,
+    dealId: form.dealId || undefined,
+    leadId: form.leadId || undefined,
+    customerContactId: form.customerContactId || undefined,
   };
 }
 
@@ -182,108 +213,92 @@ export default function CrmDashboardPage() {
   const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [crmLoading, setCrmLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<CrmTab>("overview");
+  const [pageError, setPageError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const [summary, setSummary] = useState<CrmSummary | null>(null);
+  const [stages, setStages] = useState<PipelineStage[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [tasks, setTasks] = useState<SalesTask[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [activities, setActivities] = useState<LeadActivity[]>([]);
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [nowTimestamp, setNowTimestamp] = useState<number | null>(null);
+  const [customer360, setCustomer360] = useState<Customer360 | null>(null);
 
-  const [pageError, setPageError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [dealForm, setDealForm] = useState(emptyDealForm);
+  const [editDealId, setEditDealId] = useState<string | null>(null);
+  const [editDealForm, setEditDealForm] = useState(emptyDealForm);
+  const [taskForm, setTaskForm] = useState(emptyTaskForm);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [lostReasonByDeal, setLostReasonByDeal] = useState<Record<string, string>>({});
+  const [savingAction, setSavingAction] = useState<string | null>(null);
 
-  const [createLeadForm, setCreateLeadForm] = useState(emptyLeadForm);
-  const [editLeadId, setEditLeadId] = useState<string | null>(null);
-  const [editLeadForm, setEditLeadForm] = useState(emptyLeadForm);
-  const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
-  const [activityForm, setActivityForm] = useState({ type: "note" as ActivityType, note: "" });
-
-  const [creatingLead, setCreatingLead] = useState(false);
-  const [creatingCustomer, setCreatingCustomer] = useState(false);
-  const [savingLeadId, setSavingLeadId] = useState<string | null>(null);
-  const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
-  const [archivingLeadId, setArchivingLeadId] = useState<string | null>(null);
-  const [archivingCustomerId, setArchivingCustomerId] = useState<string | null>(null);
-  const [addingActivity, setAddingActivity] = useState(false);
-
-  const canReadCrm = currentUser?.permissions.includes("crm.read") ?? false;
-  const canCreateCrm = currentUser?.permissions.includes("crm.create") ?? false;
-  const canUpdateCrm = currentUser?.permissions.includes("crm.update") ?? false;
-  const canConvertCrm = currentUser?.permissions.includes("crm.convert") ?? false;
-  const canArchiveCrm = currentUser?.permissions.includes("crm.archive") ?? false;
+  const canReadCrm = hasPermission(currentUser, "crm.read");
+  const canReadPipeline = hasPermission(currentUser, "crm.pipeline.read");
+  const canReadDeals = hasPermission(currentUser, "crm.deals.read");
+  const canCreateDeals = hasPermission(currentUser, "crm.deals.create");
+  const canUpdateDeals = hasPermission(currentUser, "crm.deals.update");
+  const canCloseDeals = hasPermission(currentUser, "crm.deals.close");
+  const canReadTasks = hasPermission(currentUser, "crm.tasks.read");
+  const canCreateTasks = hasPermission(currentUser, "crm.tasks.create");
+  const canUpdateTasks = hasPermission(currentUser, "crm.tasks.update");
 
   const visibleNav = useMemo(() => {
     if (!currentUser) return [];
     return navItems.filter((item) => currentUser.permissions.includes(item.permission));
   }, [currentUser]);
 
-  const selectedLead = useMemo(
-    () => leads.find((lead) => lead.id === selectedLeadId) ?? leads[0] ?? null,
-    [leads, selectedLeadId],
-  );
+  const activeDeals = useMemo(() => deals.filter((deal) => deal.status === "active"), [deals]);
+  const openTasks = useMemo(() => tasks.filter((task) => task.status === "pending" || task.status === "in_progress"), [tasks]);
 
-  const activeLeads = useMemo(() => leads.filter((lead) => lead.status === "active"), [leads]);
-  const followUpsDue = useMemo(() => {
-    if (nowTimestamp === null) {
-      return [];
-    }
+  const visibleTabs = useMemo(() => {
+    const tabs: Array<{ id: CrmTab; label: string; enabled: boolean }> = [
+      { id: "overview", label: "Overview", enabled: canReadCrm },
+      { id: "pipeline", label: "Pipeline", enabled: canReadPipeline && canReadDeals },
+      { id: "deals", label: "Deals", enabled: canReadDeals },
+      { id: "tasks", label: "Tasks", enabled: canReadTasks },
+      { id: "customers", label: "Customer 360", enabled: canReadCrm },
+    ];
+    return tabs.filter((tab) => tab.enabled);
+  }, [canReadCrm, canReadDeals, canReadPipeline, canReadTasks]);
 
-    return leads.filter(
-      (lead) =>
-        lead.status === "active" &&
-        lead.nextFollowUpAt &&
-        new Date(lead.nextFollowUpAt).getTime() <= nowTimestamp,
-    );
-  }, [leads, nowTimestamp]);
-  const convertedLeads = useMemo(() => leads.filter((lead) => lead.status === "converted"), [leads]);
-
-  async function loadLeads() {
-    const response = await fetch("/api/crm/leads", { cache: "no-store" });
-    const payload = (await response.json().catch(() => ({}))) as { leads?: Lead[] } & ApiErrorPayload;
-    if (!response.ok) throw new Error(normalizeError(payload, "Could not load CRM leads."));
-    const nextLeads = payload.leads ?? [];
-    const nextSelectedLeadId =
-      selectedLeadId && nextLeads.some((lead) => lead.id === selectedLeadId)
-        ? selectedLeadId
-        : nextLeads[0]?.id ?? null;
-
-    setLeads(nextLeads);
-    setSelectedLeadId(nextSelectedLeadId);
-    await loadActivities(nextSelectedLeadId);
-  }
-
-  async function loadCustomers() {
-    const response = await fetch("/api/crm/customers", { cache: "no-store" });
-    const payload = (await response.json().catch(() => ({}))) as { customers?: Customer[] } & ApiErrorPayload;
-    if (!response.ok) throw new Error(normalizeError(payload, "Could not load CRM customers."));
-    setCustomers(payload.customers ?? []);
-  }
-
-  async function refreshCrm() {
+  async function loadCrmData(permissionList = currentUser?.permissions ?? []) {
     setCrmLoading(true);
     setPageError(null);
     try {
-      await Promise.all([loadLeads(), loadCustomers()]);
-      setNowTimestamp(Date.now());
+      const mayReadCrm = permissionList.includes("crm.read");
+      const mayReadDeals = permissionList.includes("crm.deals.read");
+      const mayReadPipeline = permissionList.includes("crm.pipeline.read");
+      const mayReadTasks = permissionList.includes("crm.tasks.read");
+      const [summaryResult, stageResult, dealResult, taskResult, leadResult, customerResult] = await Promise.allSettled([
+        mayReadDeals ? readJson<{ summary: CrmSummary }>("/api/crm/summary", "Could not load CRM summary.") : Promise.resolve({ summary: null }),
+        mayReadPipeline ? readJson<{ stages: PipelineStage[] }>("/api/crm/pipeline-stages", "Could not load pipeline stages.") : Promise.resolve({ stages: [] }),
+        mayReadDeals ? readJson<{ deals: Deal[] }>("/api/crm/deals", "Could not load deals.") : Promise.resolve({ deals: [] }),
+        mayReadTasks ? readJson<{ tasks: SalesTask[] }>("/api/crm/tasks", "Could not load tasks.") : Promise.resolve({ tasks: [] }),
+        mayReadCrm ? readJson<{ leads: Lead[] }>("/api/crm/leads", "Could not load leads.") : Promise.resolve({ leads: [] }),
+        mayReadCrm ? readJson<{ customers: Customer[] }>("/api/crm/customers", "Could not load customers.") : Promise.resolve({ customers: [] }),
+      ]);
+
+      const failures = [summaryResult, stageResult, dealResult, taskResult, leadResult, customerResult]
+        .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+        .map((result) => (result.reason instanceof Error ? result.reason.message : "Could not load CRM data."));
+
+      if (failures.length > 0) throw new Error(failures[0]);
+
+      if (summaryResult.status === "fulfilled") setSummary(summaryResult.value.summary);
+      if (stageResult.status === "fulfilled") setStages(stageResult.value.stages);
+      if (dealResult.status === "fulfilled") setDeals(dealResult.value.deals);
+      if (taskResult.status === "fulfilled") setTasks(taskResult.value.tasks);
+      if (leadResult.status === "fulfilled") setLeads(leadResult.value.leads);
+      if (customerResult.status === "fulfilled") {
+        setCustomers(customerResult.value.customers);
+        setSelectedCustomerId((current) => current || customerResult.value.customers[0]?.id || "");
+      }
     } catch (error) {
       setPageError(error instanceof Error ? error.message : "Could not load CRM data.");
     } finally {
       setCrmLoading(false);
-    }
-  }
-
-  async function loadActivities(leadId: string | null) {
-    if (!leadId) {
-      setActivities([]);
-      return;
-    }
-    try {
-      const response = await fetch(`/api/crm/leads/${leadId}/activities`, { cache: "no-store" });
-      const payload = (await response.json().catch(() => ({}))) as { activities?: LeadActivity[] } & ApiErrorPayload;
-      if (!response.ok) throw new Error(normalizeError(payload, "Could not load CRM activities."));
-      setActivities(payload.activities ?? []);
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Could not load CRM activities.");
     }
   }
 
@@ -294,8 +309,9 @@ export default function CrmDashboardPage() {
         const user = await getCurrentUser();
         if (!active) return;
         setCurrentUser(user);
-        if (!user.permissions.includes("crm.read")) return;
-        await refreshCrm();
+        if (user.permissions.includes("crm.read")) {
+          await loadCrmData(user.permissions);
+        }
       } catch {
         if (active) router.replace("/login");
       } finally {
@@ -306,7 +322,7 @@ export default function CrmDashboardPage() {
     return () => {
       active = false;
     };
-    // Initial auth/page load only; CRM refresh is triggered manually after mutations.
+    // Initial auth/page load only; manual refresh handles later mutations.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
@@ -316,169 +332,138 @@ export default function CrmDashboardPage() {
     router.refresh();
   }
 
-  async function handleCreateLead(event: React.FormEvent<HTMLFormElement>) {
+  async function handleCreateDeal(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setCreatingLead(true);
+    setSavingAction("create-deal");
     setActionError(null);
     setSuccess(null);
     try {
-      const response = await fetch("/api/crm/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(leadPayload(createLeadForm)),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { lead?: Lead } & ApiErrorPayload;
-      if (!response.ok) throw new Error(normalizeError(payload, "Could not create lead."));
-      setCreateLeadForm(emptyLeadForm);
-      setSuccess(`${payload.lead?.name ?? "Lead"} created.`);
-      await refreshCrm();
-      if (payload.lead?.id) setSelectedLeadId(payload.lead.id);
+      const payload = await writeJson<{ deal: Deal }>("/api/crm/deals", "POST", dealPayload(dealForm), "Could not create deal.");
+      setDealForm(emptyDealForm);
+      setSuccess(`${payload.deal.name} created.`);
+      await loadCrmData();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Could not create lead.");
+      setActionError(error instanceof Error ? error.message : "Could not create deal.");
     } finally {
-      setCreatingLead(false);
+      setSavingAction(null);
     }
   }
 
-  async function handleCreateCustomer(event: React.FormEvent<HTMLFormElement>) {
+  async function handleUpdateDeal(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setCreatingCustomer(true);
+    if (!editDealId) return;
+    setSavingAction(`update-deal-${editDealId}`);
     setActionError(null);
     setSuccess(null);
     try {
-      const response = await fetch("/api/crm/customers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(customerPayload(customerForm)),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { customer?: Customer } & ApiErrorPayload;
-      if (!response.ok) throw new Error(normalizeError(payload, "Could not create customer."));
-      setCustomerForm(emptyCustomerForm);
-      setSuccess(`${payload.customer?.name ?? "Customer"} created.`);
-      await loadCustomers();
+      const payload = await writeJson<{ deal: Deal }>(
+        `/api/crm/deals/${editDealId}`,
+        "PATCH",
+        dealPayload(editDealForm),
+        "Could not update deal.",
+      );
+      setEditDealId(null);
+      setEditDealForm(emptyDealForm);
+      setSuccess(`${payload.deal.name} updated.`);
+      await loadCrmData();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Could not create customer.");
+      setActionError(error instanceof Error ? error.message : "Could not update deal.");
     } finally {
-      setCreatingCustomer(false);
+      setSavingAction(null);
     }
   }
 
-  async function handleUpdateLead(event: React.FormEvent<HTMLFormElement>) {
+  async function handleDealAction(deal: Deal, action: "close-won" | "close-lost" | "archive") {
+    setSavingAction(`${action}-${deal.id}`);
+    setActionError(null);
+    setSuccess(null);
+    try {
+      const body =
+        action === "close-lost"
+          ? { lostReason: lostReasonByDeal[deal.id]?.trim() || "Not a fit right now." }
+          : action === "close-won"
+            ? { note: "Closed from CRM dashboard." }
+            : undefined;
+      const payload = await writeJson<{ deal: Deal }>(
+        `/api/crm/deals/${deal.id}/${action}`,
+        "POST",
+        body,
+        `Could not ${action.replace("-", " ")} deal.`,
+      );
+      setSuccess(`${payload.deal.name} ${action.replace("-", " ")} completed.`);
+      await loadCrmData();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : `Could not ${action.replace("-", " ")} deal.`);
+    } finally {
+      setSavingAction(null);
+    }
+  }
+
+  async function handleCreateTask(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!editLeadId) return;
-    setSavingLeadId(editLeadId);
+    setSavingAction("create-task");
     setActionError(null);
     setSuccess(null);
     try {
-      const response = await fetch(`/api/crm/leads/${editLeadId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(leadPayload(editLeadForm)),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { lead?: Lead } & ApiErrorPayload;
-      if (!response.ok) throw new Error(normalizeError(payload, "Could not update lead."));
-      setSuccess(`${payload.lead?.name ?? "Lead"} updated.`);
-      setEditLeadId(null);
-      await refreshCrm();
+      const payload = await writeJson<{ task: SalesTask }>("/api/crm/tasks", "POST", taskPayload(taskForm), "Could not create task.");
+      setTaskForm(emptyTaskForm);
+      setSuccess(`${payload.task.title} created.`);
+      await loadCrmData();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Could not update lead.");
+      setActionError(error instanceof Error ? error.message : "Could not create task.");
     } finally {
-      setSavingLeadId(null);
+      setSavingAction(null);
     }
   }
 
-  async function handleConvertLead(lead: Lead) {
-    setConvertingLeadId(lead.id);
+  async function handleTaskAction(task: SalesTask, action: "complete" | "cancel") {
+    setSavingAction(`${action}-task-${task.id}`);
     setActionError(null);
     setSuccess(null);
     try {
-      const response = await fetch(`/api/crm/leads/${lead.id}/convert`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: {
-            name: lead.name,
-            companyName: lead.companyName ?? undefined,
-            email: lead.email ?? undefined,
-            phone: lead.phone ?? undefined,
-            notes: lead.notes ?? undefined,
-          },
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { lead?: Lead } & ApiErrorPayload;
-      if (!response.ok) throw new Error(normalizeError(payload, "Could not convert lead."));
-      setSuccess(`${payload.lead?.name ?? "Lead"} converted to customer.`);
-      await refreshCrm();
+      const payload = await writeJson<{ task: SalesTask }>(
+        `/api/crm/tasks/${task.id}/${action}`,
+        "POST",
+        undefined,
+        `Could not ${action} task.`,
+      );
+      setSuccess(`${payload.task.title} ${action}d.`);
+      await loadCrmData();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Could not convert lead.");
+      setActionError(error instanceof Error ? error.message : `Could not ${action} task.`);
     } finally {
-      setConvertingLeadId(null);
+      setSavingAction(null);
     }
   }
 
-  async function handleArchiveLead(lead: Lead) {
-    setArchivingLeadId(lead.id);
+  async function loadCustomer360(customerId: string) {
+    setSelectedCustomerId(customerId);
+    setCustomer360(null);
     setActionError(null);
-    setSuccess(null);
+    if (!customerId) return;
     try {
-      const response = await fetch(`/api/crm/leads/${lead.id}/archive`, { method: "POST" });
-      const payload = (await response.json().catch(() => ({}))) as { lead?: Lead } & ApiErrorPayload;
-      if (!response.ok) throw new Error(normalizeError(payload, "Could not archive lead."));
-      setSuccess(`${payload.lead?.name ?? "Lead"} archived.`);
-      await refreshCrm();
+      const payload = await readJson<{ customer360: Customer360 }>(
+        `/api/crm/customers/${customerId}/360`,
+        "Could not load customer 360.",
+      );
+      setCustomer360(payload.customer360);
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Could not archive lead.");
-    } finally {
-      setArchivingLeadId(null);
+      setActionError(error instanceof Error ? error.message : "Could not load customer 360.");
     }
   }
 
-  async function handleArchiveCustomer(customer: Customer) {
-    setArchivingCustomerId(customer.id);
-    setActionError(null);
-    setSuccess(null);
-    try {
-      const response = await fetch(`/api/crm/customers/${customer.id}/archive`, { method: "POST" });
-      const payload = (await response.json().catch(() => ({}))) as { customer?: Customer } & ApiErrorPayload;
-      if (!response.ok) throw new Error(normalizeError(payload, "Could not archive customer."));
-      setSuccess(`${payload.customer?.name ?? "Customer"} archived.`);
-      await loadCustomers();
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Could not archive customer.");
-    } finally {
-      setArchivingCustomerId(null);
-    }
-  }
-
-  async function handleAddActivity(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedLead) return;
-    setAddingActivity(true);
-    setActionError(null);
-    setSuccess(null);
-    try {
-      const response = await fetch(`/api/crm/leads/${selectedLead.id}/activities`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(activityForm),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { activity?: LeadActivity } & ApiErrorPayload;
-      if (!response.ok) throw new Error(normalizeError(payload, "Could not add activity."));
-      setActivityForm({ type: "note", note: "" });
-      setSuccess("Activity added.");
-      await loadActivities(selectedLead.id);
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Could not add activity.");
-    } finally {
-      setAddingActivity(false);
-    }
-  }
-
-  function beginEditLead(lead: Lead) {
-    setEditLeadId(lead.id);
-    setEditLeadForm(formFromLead(lead));
-    setActionError(null);
-    setSuccess(null);
+  function startEditDeal(deal: Deal) {
+    setEditDealId(deal.id);
+    setEditDealForm({
+      name: deal.name,
+      description: deal.description ?? "",
+      value: deal.value === null ? "" : String(deal.value),
+      probability: String(deal.probability),
+      expectedCloseDate: deal.expectedCloseDate ? deal.expectedCloseDate.slice(0, 10) : "",
+      currentStageId: deal.currentStageId,
+      leadId: deal.leadId ?? "",
+      customerContactId: deal.customerContactId ?? "",
+    });
   }
 
   if (loading) {
@@ -547,12 +532,12 @@ export default function CrmDashboardPage() {
           <>
             <section className="dashboard-hero">
               <div>
-                <p className="eyebrow">Customer relationship management</p>
-                <h2>Pipeline, follow-ups, and customer records</h2>
-                <p>Track leads, next actions, customer contacts, and conversion flow inside the same tenant-safe ERP workspace.</p>
+                <p className="eyebrow">Modern sales CRM</p>
+                <h2>Pipeline, deals, tasks, and customer context</h2>
+                <p>Manage day-to-day sales motion with tenant-scoped controls, clean pipeline visibility, and role-aware actions.</p>
               </div>
               <div className="hero-actions">
-                <button className="secondary-button" type="button" onClick={refreshCrm} disabled={crmLoading}>
+                <button className="secondary-button" type="button" onClick={() => void loadCrmData()} disabled={crmLoading}>
                   {crmLoading ? "Refreshing..." : "Refresh"}
                 </button>
               </div>
@@ -562,210 +547,381 @@ export default function CrmDashboardPage() {
             {actionError ? <div className="form-error">{actionError}</div> : null}
             {success ? <div className="form-success">{success}</div> : null}
 
-            <section className="dashboard-grid" aria-label="CRM summary">
-              <article className="stat-tile">
-                <span>Active leads</span>
-                <strong>{activeLeads.length}</strong>
-              </article>
-              <article className="stat-tile">
-                <span>Follow-ups due</span>
-                <strong>{followUpsDue.length}</strong>
-              </article>
-              <article className="stat-tile">
-                <span>Converted</span>
-                <strong>{convertedLeads.length}</strong>
-              </article>
-              <article className="stat-tile">
-                <span>Customers</span>
-                <strong>{customers.filter((customer) => customer.status !== "archived").length}</strong>
-              </article>
-            </section>
+            <div className="crm-tabs" role="tablist" aria-label="CRM workspace tabs">
+              {visibleTabs.map((tab) => (
+                <button
+                  aria-selected={activeTab === tab.id}
+                  className={activeTab === tab.id ? "crm-tab active" : "crm-tab"}
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  role="tab"
+                  type="button"
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-            <section className="module-section">
-              <div className="section-heading-row">
-                <div>
-                  <span>Lead desk</span>
-                  <h2>Leads</h2>
-                </div>
-                <span>{crmLoading ? "Loading..." : `${leads.length} records`}</span>
-              </div>
-
-              {canCreateCrm ? (
-                <form className="crm-form" onSubmit={handleCreateLead}>
-                  <label className="field">
-                    <span>Name</span>
-                    <input value={createLeadForm.name} onChange={(event) => setCreateLeadForm({ ...createLeadForm, name: event.target.value })} required />
-                  </label>
-                  <label className="field">
-                    <span>Company</span>
-                    <input value={createLeadForm.companyName} onChange={(event) => setCreateLeadForm({ ...createLeadForm, companyName: event.target.value })} />
-                  </label>
-                  <label className="field">
-                    <span>Phone</span>
-                    <input value={createLeadForm.phone} onChange={(event) => setCreateLeadForm({ ...createLeadForm, phone: event.target.value })} />
-                  </label>
-                  <label className="field">
-                    <span>Email</span>
-                    <input type="email" value={createLeadForm.email} onChange={(event) => setCreateLeadForm({ ...createLeadForm, email: event.target.value })} />
-                  </label>
-                  <label className="field">
-                    <span>Source</span>
-                    <input value={createLeadForm.source} onChange={(event) => setCreateLeadForm({ ...createLeadForm, source: event.target.value })} />
-                  </label>
-                  <label className="field">
-                    <span>Stage</span>
-                    <select value={createLeadForm.stage} onChange={(event) => setCreateLeadForm({ ...createLeadForm, stage: event.target.value as LeadStage })}>
-                      {["new", "contacted", "qualified", "proposal", "won", "lost"].map((stage) => (
-                        <option key={stage} value={stage}>{stage}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span>Value</span>
-                    <input type="number" min="0" step="0.01" value={createLeadForm.estimatedValue} onChange={(event) => setCreateLeadForm({ ...createLeadForm, estimatedValue: event.target.value })} />
-                  </label>
-                  <label className="field">
-                    <span>Follow-up</span>
-                    <input type="date" value={createLeadForm.nextFollowUpAt} onChange={(event) => setCreateLeadForm({ ...createLeadForm, nextFollowUpAt: event.target.value })} />
-                  </label>
-                  <label className="field crm-wide-field">
-                    <span>Notes</span>
-                    <textarea value={createLeadForm.notes} onChange={(event) => setCreateLeadForm({ ...createLeadForm, notes: event.target.value })} />
-                  </label>
-                  <div className="crm-actions">
-                    <button className="primary-button" type="submit" disabled={creatingLead}>{creatingLead ? "Creating..." : "Create lead"}</button>
-                  </div>
-                </form>
-              ) : null}
-
-              <div className="crm-record-list">
-                {leads.length === 0 ? <p className="muted-text">No CRM leads yet.</p> : null}
-                {leads.map((lead) => (
-                  <article className={selectedLead?.id === lead.id ? "crm-record-row active" : "crm-record-row"} key={lead.id}>
-                    <button
-                      className="crm-row-main"
-                      type="button"
-                      onClick={() => {
-                        setSelectedLeadId(lead.id);
-                        void loadActivities(lead.id);
-                      }}
-                    >
-                      <strong>{lead.name}</strong>
-                      <span>{lead.companyName ?? lead.phone ?? lead.email ?? "No contact detail"}</span>
-                    </button>
-                    <div>
-                      <span>Stage</span>
-                      <strong>{lead.stage}</strong>
+            {activeTab === "overview" ? (
+              <>
+                <section className="dashboard-grid" aria-label="CRM summary">
+                  <article className="stat-tile">
+                    <span>Active deals</span>
+                    <strong>{activeDeals.length}</strong>
+                  </article>
+                  <article className="stat-tile">
+                    <span>Pipeline value</span>
+                    <strong>{formatMoney(summary?.activeDealValue)}</strong>
+                  </article>
+                  <article className="stat-tile">
+                    <span>Open tasks</span>
+                    <strong>{openTasks.length}</strong>
+                  </article>
+                  <article className="stat-tile">
+                    <span>Overdue tasks</span>
+                    <strong>{summary?.overdueTasks ?? 0}</strong>
+                  </article>
+                </section>
+                <section className="crm-split">
+                  <article className="module-section">
+                    <div className="section-heading-row">
+                      <div>
+                        <span>Pipeline health</span>
+                        <h2>Stage distribution</h2>
+                      </div>
                     </div>
-                    <div>
-                      <span>Status</span>
-                      <strong>{lead.status}</strong>
-                    </div>
-                    <div>
-                      <span>Follow-up</span>
-                      <strong>{formatDate(lead.nextFollowUpAt)}</strong>
-                    </div>
-                    <div>
-                      <span>Value</span>
-                      <strong>{formatMoney(lead.estimatedValue)}</strong>
-                    </div>
-                    <div className="crm-row-actions">
-                      {canUpdateCrm && lead.status === "active" ? <button className="secondary-button" type="button" onClick={() => beginEditLead(lead)}>Edit</button> : null}
-                      {canConvertCrm && lead.status === "active" ? <button className="secondary-button" type="button" onClick={() => handleConvertLead(lead)} disabled={convertingLeadId === lead.id}>{convertingLeadId === lead.id ? "Converting..." : "Convert"}</button> : null}
-                      {canArchiveCrm && lead.status !== "archived" ? <button className="secondary-button" type="button" onClick={() => handleArchiveLead(lead)} disabled={archivingLeadId === lead.id}>{archivingLeadId === lead.id ? "Archiving..." : "Archive"}</button> : null}
-                    </div>
-                    {editLeadId === lead.id ? (
-                      <form className="crm-edit-form" onSubmit={handleUpdateLead}>
-                        <input value={editLeadForm.name} onChange={(event) => setEditLeadForm({ ...editLeadForm, name: event.target.value })} required />
-                        <input value={editLeadForm.companyName} onChange={(event) => setEditLeadForm({ ...editLeadForm, companyName: event.target.value })} placeholder="Company" />
-                        <select value={editLeadForm.stage} onChange={(event) => setEditLeadForm({ ...editLeadForm, stage: event.target.value as LeadStage })}>
-                          {["new", "contacted", "qualified", "proposal", "won", "lost"].map((stage) => (
-                            <option key={stage} value={stage}>{stage}</option>
-                          ))}
-                        </select>
-                        <input type="date" value={editLeadForm.nextFollowUpAt} onChange={(event) => setEditLeadForm({ ...editLeadForm, nextFollowUpAt: event.target.value })} />
-                        <textarea value={editLeadForm.notes} onChange={(event) => setEditLeadForm({ ...editLeadForm, notes: event.target.value })} />
-                        <div className="crm-actions">
-                          <button className="primary-button" type="submit" disabled={savingLeadId === lead.id}>{savingLeadId === lead.id ? "Saving..." : "Save lead"}</button>
-                          <button className="secondary-button" type="button" onClick={() => setEditLeadId(null)}>Cancel</button>
+                    <div className="crm-stage-list">
+                      {stages.map((stage) => (
+                        <div className="crm-stage-summary" key={stage.id}>
+                          <strong>{stage.name}</strong>
+                          <span>{stage._count?.activeDeals ?? deals.filter((deal) => deal.currentStageId === stage.id).length} deals</span>
                         </div>
-                      </form>
-                    ) : null}
+                      ))}
+                    </div>
+                  </article>
+                  <article className="module-section">
+                    <div className="section-heading-row">
+                      <div>
+                        <span>Next actions</span>
+                        <h2>Upcoming tasks</h2>
+                      </div>
+                    </div>
+                    <div className="crm-record-list">
+                      {openTasks.slice(0, 5).map((task) => (
+                        <article className="crm-task-row" key={task.id}>
+                          <div>
+                            <strong>{task.title}</strong>
+                            <span>{task.deal?.name ?? task.customerContact?.name ?? task.lead?.name ?? "General CRM task"}</span>
+                          </div>
+                          <strong>{task.priority}</strong>
+                          <span>{formatDate(task.dueAt)}</span>
+                        </article>
+                      ))}
+                      {openTasks.length === 0 ? <p className="muted-text">No open CRM tasks.</p> : null}
+                    </div>
+                  </article>
+                </section>
+              </>
+            ) : null}
+
+            {activeTab === "pipeline" ? (
+              <section className="crm-pipeline-grid" aria-label="CRM pipeline">
+                {stages.map((stage) => (
+                  <article className="crm-pipeline-column" key={stage.id}>
+                    <header>
+                      <strong>{stage.name}</strong>
+                      <span>{deals.filter((deal) => deal.currentStageId === stage.id && deal.status === "active").length}</span>
+                    </header>
+                    <div className="crm-pipeline-cards">
+                      {deals
+                        .filter((deal) => deal.currentStageId === stage.id && deal.status === "active")
+                        .map((deal) => (
+                          <div className="crm-deal-card" key={deal.id}>
+                            <strong>{deal.name}</strong>
+                            <span>{formatMoney(deal.value)} · {deal.probability}%</span>
+                            <small>{deal.customerContact?.name ?? deal.lead?.name ?? "No linked contact"}</small>
+                          </div>
+                        ))}
+                    </div>
                   </article>
                 ))}
-              </div>
-            </section>
+              </section>
+            ) : null}
 
-            <section className="crm-split">
-              <article className="module-section">
+            {activeTab === "deals" ? (
+              <section className="module-section">
                 <div className="section-heading-row">
                   <div>
-                    <span>Customer contacts</span>
-                    <h2>Customers</h2>
+                    <span>Opportunities</span>
+                    <h2>Deals</h2>
                   </div>
+                  <span>{deals.length} records</span>
                 </div>
-                {canCreateCrm ? (
-                  <form className="crm-form compact" onSubmit={handleCreateCustomer}>
-                    <input placeholder="Name" value={customerForm.name} onChange={(event) => setCustomerForm({ ...customerForm, name: event.target.value })} required />
-                    <input placeholder="Company" value={customerForm.companyName} onChange={(event) => setCustomerForm({ ...customerForm, companyName: event.target.value })} />
-                    <input placeholder="Phone" value={customerForm.phone} onChange={(event) => setCustomerForm({ ...customerForm, phone: event.target.value })} />
-                    <input placeholder="Email" type="email" value={customerForm.email} onChange={(event) => setCustomerForm({ ...customerForm, email: event.target.value })} />
+
+                {canCreateDeals ? (
+                  <form className="crm-form" onSubmit={handleCreateDeal}>
+                    <label className="field">
+                      <span>Name</span>
+                      <input value={dealForm.name} onChange={(event) => setDealForm({ ...dealForm, name: event.target.value })} required />
+                    </label>
+                    <label className="field">
+                      <span>Stage</span>
+                      <select value={dealForm.currentStageId} onChange={(event) => setDealForm({ ...dealForm, currentStageId: event.target.value })}>
+                        <option value="">Default stage</option>
+                        {stages.filter((stage) => stage.isActive).map((stage) => (
+                          <option key={stage.id} value={stage.id}>{stage.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Value</span>
+                      <input min="0" step="0.01" type="number" value={dealForm.value} onChange={(event) => setDealForm({ ...dealForm, value: event.target.value })} />
+                    </label>
+                    <label className="field">
+                      <span>Probability</span>
+                      <input min="0" max="100" type="number" value={dealForm.probability} onChange={(event) => setDealForm({ ...dealForm, probability: event.target.value })} />
+                    </label>
+                    <label className="field">
+                      <span>Expected close</span>
+                      <input type="date" value={dealForm.expectedCloseDate} onChange={(event) => setDealForm({ ...dealForm, expectedCloseDate: event.target.value })} />
+                    </label>
+                    <label className="field">
+                      <span>Lead</span>
+                      <select value={dealForm.leadId} onChange={(event) => setDealForm({ ...dealForm, leadId: event.target.value })}>
+                        <option value="">No lead</option>
+                        {leads.map((lead) => <option key={lead.id} value={lead.id}>{lead.name}</option>)}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Customer</span>
+                      <select value={dealForm.customerContactId} onChange={(event) => setDealForm({ ...dealForm, customerContactId: event.target.value })}>
+                        <option value="">No customer</option>
+                        {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+                      </select>
+                    </label>
+                    <label className="field crm-wide-field">
+                      <span>Description</span>
+                      <textarea value={dealForm.description} onChange={(event) => setDealForm({ ...dealForm, description: event.target.value })} />
+                    </label>
                     <div className="crm-actions">
-                      <button className="primary-button" type="submit" disabled={creatingCustomer}>{creatingCustomer ? "Creating..." : "Create customer"}</button>
+                      <button className="primary-button" disabled={savingAction === "create-deal"} type="submit">
+                        {savingAction === "create-deal" ? "Creating..." : "Create deal"}
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
+
+                <div className="crm-record-list">
+                  {deals.map((deal) => (
+                    <article className="crm-deal-row" key={deal.id}>
+                      <div>
+                        <span>Deal</span>
+                        <strong>{deal.name}</strong>
+                      </div>
+                      <div>
+                        <span>Stage</span>
+                        <strong>{deal.currentStage?.name ?? "-"}</strong>
+                      </div>
+                      <div>
+                        <span>Value</span>
+                        <strong>{formatMoney(deal.value)}</strong>
+                      </div>
+                      <div>
+                        <span>Status</span>
+                        <strong>{deal.status}</strong>
+                      </div>
+                      <div>
+                        <span>Close date</span>
+                        <strong>{formatDate(deal.expectedCloseDate)}</strong>
+                      </div>
+                      <div className="crm-row-actions">
+                        {canUpdateDeals && deal.status === "active" ? (
+                          <button className="secondary-button" type="button" onClick={() => startEditDeal(deal)}>Edit</button>
+                        ) : null}
+                        {canCloseDeals && deal.status === "active" ? (
+                          <>
+                            <button className="secondary-button" disabled={savingAction === `close-won-${deal.id}`} type="button" onClick={() => handleDealAction(deal, "close-won")}>
+                              Won
+                            </button>
+                            <input
+                              aria-label={`Lost reason for ${deal.name}`}
+                              className="crm-inline-input"
+                              placeholder="Lost reason"
+                              value={lostReasonByDeal[deal.id] ?? ""}
+                              onChange={(event) => setLostReasonByDeal({ ...lostReasonByDeal, [deal.id]: event.target.value })}
+                            />
+                            <button className="secondary-button" disabled={savingAction === `close-lost-${deal.id}`} type="button" onClick={() => handleDealAction(deal, "close-lost")}>
+                              Lost
+                            </button>
+                          </>
+                        ) : null}
+                        {canUpdateDeals && deal.status !== "archived" ? (
+                          <button className="secondary-button" disabled={savingAction === `archive-${deal.id}`} type="button" onClick={() => handleDealAction(deal, "archive")}>
+                            Archive
+                          </button>
+                        ) : null}
+                      </div>
+                      {editDealId === deal.id ? (
+                        <form className="crm-edit-form" onSubmit={handleUpdateDeal}>
+                          <input value={editDealForm.name} onChange={(event) => setEditDealForm({ ...editDealForm, name: event.target.value })} required />
+                          <select value={editDealForm.currentStageId} onChange={(event) => setEditDealForm({ ...editDealForm, currentStageId: event.target.value })}>
+                            {stages.filter((stage) => stage.isActive).map((stage) => (
+                              <option key={stage.id} value={stage.id}>{stage.name}</option>
+                            ))}
+                          </select>
+                          <input min="0" step="0.01" type="number" value={editDealForm.value} onChange={(event) => setEditDealForm({ ...editDealForm, value: event.target.value })} />
+                          <input min="0" max="100" type="number" value={editDealForm.probability} onChange={(event) => setEditDealForm({ ...editDealForm, probability: event.target.value })} />
+                          <textarea value={editDealForm.description} onChange={(event) => setEditDealForm({ ...editDealForm, description: event.target.value })} />
+                          <div className="crm-actions">
+                            <button className="primary-button" disabled={savingAction === `update-deal-${deal.id}`} type="submit">Save</button>
+                            <button className="secondary-button" type="button" onClick={() => setEditDealId(null)}>Cancel</button>
+                          </div>
+                        </form>
+                      ) : null}
+                    </article>
+                  ))}
+                  {deals.length === 0 ? <p className="muted-text">No deals yet.</p> : null}
+                </div>
+              </section>
+            ) : null}
+
+            {activeTab === "tasks" ? (
+              <section className="module-section">
+                <div className="section-heading-row">
+                  <div>
+                    <span>Follow-up work</span>
+                    <h2>Sales tasks</h2>
+                  </div>
+                  <span>{tasks.length} records</span>
+                </div>
+                {canCreateTasks ? (
+                  <form className="crm-form" onSubmit={handleCreateTask}>
+                    <label className="field">
+                      <span>Title</span>
+                      <input value={taskForm.title} onChange={(event) => setTaskForm({ ...taskForm, title: event.target.value })} required />
+                    </label>
+                    <label className="field">
+                      <span>Priority</span>
+                      <select value={taskForm.priority} onChange={(event) => setTaskForm({ ...taskForm, priority: event.target.value as TaskPriority })}>
+                        {["low", "medium", "high", "urgent"].map((priority) => <option key={priority} value={priority}>{priority}</option>)}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Due date</span>
+                      <input type="date" value={taskForm.dueAt} onChange={(event) => setTaskForm({ ...taskForm, dueAt: event.target.value })} />
+                    </label>
+                    <label className="field">
+                      <span>Deal</span>
+                      <select value={taskForm.dealId} onChange={(event) => setTaskForm({ ...taskForm, dealId: event.target.value })}>
+                        <option value="">No deal</option>
+                        {deals.map((deal) => <option key={deal.id} value={deal.id}>{deal.name}</option>)}
+                      </select>
+                    </label>
+                    <label className="field crm-wide-field">
+                      <span>Description</span>
+                      <textarea value={taskForm.description} onChange={(event) => setTaskForm({ ...taskForm, description: event.target.value })} />
+                    </label>
+                    <div className="crm-actions">
+                      <button className="primary-button" disabled={savingAction === "create-task"} type="submit">
+                        {savingAction === "create-task" ? "Creating..." : "Create task"}
+                      </button>
                     </div>
                   </form>
                 ) : null}
                 <div className="crm-record-list">
-                  {customers.length === 0 ? <p className="muted-text">No CRM customers yet.</p> : null}
-                  {customers.map((customer) => (
-                    <article className="crm-customer-row" key={customer.id}>
+                  {tasks.map((task) => (
+                    <article className="crm-task-row" key={task.id}>
                       <div>
-                        <strong>{customer.name}</strong>
-                        <span>{customer.companyName ?? customer.phone ?? customer.email ?? "No contact detail"}</span>
+                        <strong>{task.title}</strong>
+                        <span>{task.description ?? task.deal?.name ?? "General CRM task"}</span>
                       </div>
-                      <strong>{customer.status}</strong>
-                      {canArchiveCrm && customer.status !== "archived" ? (
-                        <button className="secondary-button" type="button" onClick={() => handleArchiveCustomer(customer)} disabled={archivingCustomerId === customer.id}>
-                          {archivingCustomerId === customer.id ? "Archiving..." : "Archive"}
-                        </button>
-                      ) : null}
+                      <strong>{task.priority}</strong>
+                      <strong>{task.status}</strong>
+                      <span>{formatDate(task.dueAt)}</span>
+                      <div className="crm-row-actions">
+                        {canUpdateTasks && task.status !== "completed" && task.status !== "cancelled" ? (
+                          <>
+                            <button className="secondary-button" type="button" onClick={() => handleTaskAction(task, "complete")}>Complete</button>
+                            <button className="secondary-button" type="button" onClick={() => handleTaskAction(task, "cancel")}>Cancel</button>
+                          </>
+                        ) : null}
+                      </div>
                     </article>
                   ))}
+                  {tasks.length === 0 ? <p className="muted-text">No CRM tasks yet.</p> : null}
                 </div>
-              </article>
+              </section>
+            ) : null}
 
-              <article className="module-section">
-                <div className="section-heading-row">
-                  <div>
-                    <span>Timeline</span>
-                    <h2>{selectedLead ? selectedLead.name : "Select a lead"}</h2>
+            {activeTab === "customers" ? (
+              <section className="crm-split">
+                <article className="module-section">
+                  <div className="section-heading-row">
+                    <div>
+                      <span>Customer list</span>
+                      <h2>Contacts</h2>
+                    </div>
                   </div>
-                </div>
-                {selectedLead && canCreateCrm ? (
-                  <form className="crm-form compact" onSubmit={handleAddActivity}>
-                    <select value={activityForm.type} onChange={(event) => setActivityForm({ ...activityForm, type: event.target.value as ActivityType })}>
-                      {["note", "call", "email", "whatsapp", "meeting"].map((type) => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
+                  <label className="field">
+                    <span>Select customer</span>
+                    <select value={selectedCustomerId} onChange={(event) => loadCustomer360(event.target.value)}>
+                      <option value="">Choose customer</option>
+                      {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
                     </select>
-                    <input placeholder="Activity note" value={activityForm.note} onChange={(event) => setActivityForm({ ...activityForm, note: event.target.value })} required />
-                    <div className="crm-actions">
-                      <button className="primary-button" type="submit" disabled={addingActivity}>{addingActivity ? "Adding..." : "Add activity"}</button>
+                  </label>
+                  <div className="crm-record-list">
+                    {customers.slice(0, 8).map((customer) => (
+                      <button className="crm-row-main crm-customer-button" key={customer.id} type="button" onClick={() => loadCustomer360(customer.id)}>
+                        <strong>{customer.name}</strong>
+                        <span>{customer.companyName ?? customer.phone ?? customer.email ?? "No contact detail"}</span>
+                      </button>
+                    ))}
+                  </div>
+                </article>
+                <article className="module-section">
+                  <div className="section-heading-row">
+                    <div>
+                      <span>Customer 360</span>
+                      <h2>{customer360?.customer.name ?? "Select a customer"}</h2>
                     </div>
-                  </form>
-                ) : null}
-                <div className="crm-timeline">
-                  {activities.length === 0 ? <p className="muted-text">No activity yet.</p> : null}
-                  {activities.map((activity) => (
-                    <div className="crm-activity" key={activity.id}>
-                      <strong>{activity.type}</strong>
-                      <p>{activity.note}</p>
-                      <span>{formatDateTime(activity.createdAt)}{activity.user ? ` by ${activity.user.name}` : ""}</span>
+                  </div>
+                  {customer360 ? (
+                    <div className="crm-360-panel">
+                      <div>
+                        <span>Company</span>
+                        <strong>{customer360.customer.companyName ?? "-"}</strong>
+                      </div>
+                      <div>
+                        <span>Email</span>
+                        <strong>{customer360.customer.email ?? "-"}</strong>
+                      </div>
+                      <div>
+                        <span>Phone</span>
+                        <strong>{customer360.customer.phone ?? "-"}</strong>
+                      </div>
+                      <div>
+                        <span>Open deals</span>
+                        <strong>{customer360.deals.filter((deal) => deal.status === "active").length}</strong>
+                      </div>
+                      <div className="crm-360-wide">
+                        <span>Recent deals</span>
+                        {customer360.deals.slice(0, 5).map((deal) => (
+                          <p key={deal.id}>{deal.name} · {formatMoney(deal.value)} · {deal.status}</p>
+                        ))}
+                      </div>
+                      <div className="crm-360-wide">
+                        <span>Tasks</span>
+                        {customer360.tasks.slice(0, 5).map((task) => (
+                          <p key={task.id}>{task.title} · {task.status} · {formatDate(task.dueAt)}</p>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </article>
-            </section>
+                  ) : (
+                    <p className="muted-text">Choose a customer to see deals and tasks in one place.</p>
+                  )}
+                </article>
+              </section>
+            ) : null}
           </>
         )}
       </section>
