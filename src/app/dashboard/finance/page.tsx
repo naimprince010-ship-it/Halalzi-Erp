@@ -511,6 +511,8 @@ export default function FinanceDashboardPage() {
               </article>
             </section>
 
+            <FinanceAdvancedPanel currentUser={currentUser} onError={setError} onSuccess={setSuccess} />
+
             <section className="procurement-section">
               <div className="section-heading-row">
                 <div>
@@ -774,5 +776,231 @@ function SettlementList({
       </div>
     </section>
   );
+}
+
+
+type AdvancedFinancePeriod = {
+  id: string;
+  periodKey: string;
+  startDate: string;
+  endDate: string;
+  status: "open" | "closed";
+  closedAt: string | null;
+  closedByUser?: { name: string; email: string } | null;
+};
+
+type AdvancedFinancePayment = {
+  id: string;
+  amount: number | string;
+  paymentDate: string;
+  method: string;
+  reference: string | null;
+};
+
+type AdvancedTrialBalanceReport = {
+  rows: Array<{ id: string; code: string; name: string; type: AccountType; debit: number; credit: number; currentBalance: number }>;
+  totals: { debit: number; credit: number; isBalanced: boolean };
+};
+
+type AdvancedAgingReport = {
+  items: Array<{ id: string; customerNameSnapshot?: string; vendorNameSnapshot?: string; dueDate: string | null; status: SettlementStatus; outstanding: number; bucket: string }>;
+  totals: { current: number; days_1_30: number; days_31_60: number; days_61_90: number; days_90_plus: number; totalOutstanding: number };
+};
+
+function dateOnly(value: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
+}
+
+function isoDateInput(value: string) {
+  return value ? new Date(`${value}T00:00:00.000Z`).toISOString() : "";
+}
+
+function FinanceAdvancedPanel({
+  currentUser,
+  onError,
+  onSuccess,
+}: {
+  currentUser: CurrentUserResponse;
+  onError: (message: string | null) => void;
+  onSuccess: (message: string | null) => void;
+}) {
+  const [periods, setPeriods] = useState<AdvancedFinancePeriod[]>([]);
+  const [receivables, setReceivables] = useState<Receivable[]>([]);
+  const [payables, setPayables] = useState<Payable[]>([]);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<Record<string, AdvancedFinancePayment[]>>({});
+  const [paymentDrafts, setPaymentDrafts] = useState<Record<string, string>>({});
+  const [periodForm, setPeriodForm] = useState({ periodKey: "", startDate: "", endDate: "" });
+  const [trialBalance, setTrialBalance] = useState<AdvancedTrialBalanceReport | null>(null);
+  const [arAging, setArAging] = useState<AdvancedAgingReport | null>(null);
+  const [apAging, setApAging] = useState<AdvancedAgingReport | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  const canReadPeriods = currentUser.permissions.includes("finance.periods.read");
+  const canManagePeriods = currentUser.permissions.includes("finance.periods.manage");
+  const canReadPayments = currentUser.permissions.includes("finance.payments.read");
+  const canCreatePayments = currentUser.permissions.includes("finance.payments.create");
+  const canReadReports = currentUser.permissions.includes("finance.reports.read");
+  const canReverseJournals = currentUser.permissions.includes("finance.journals.reverse");
+
+  async function parse<T>(response: Response, fallback: string): Promise<T> {
+    const payload = (await response.json().catch(() => ({}))) as ApiErrorPayload;
+    if (!response.ok) throw new Error(message(payload, fallback));
+    return payload as T;
+  }
+
+  async function loadAdvancedFinance() {
+    setBusy("advanced-load");
+    try {
+      const tasks: Promise<void>[] = [];
+      if (canReadPeriods) tasks.push(fetch("/api/finance/periods", { cache: "no-store" }).then((response) => parse<{ periods?: AdvancedFinancePeriod[] }>(response, "Could not load finance periods.")).then((payload) => setPeriods(payload.periods ?? [])));
+      if (canReadPayments || canCreatePayments) {
+        tasks.push(fetch("/api/finance/receivables", { cache: "no-store" }).then((response) => parse<{ receivables?: Receivable[] }>(response, "Could not load receivables.")).then((payload) => setReceivables(payload.receivables ?? [])));
+        tasks.push(fetch("/api/finance/payables", { cache: "no-store" }).then((response) => parse<{ payables?: Payable[] }>(response, "Could not load payables.")).then((payload) => setPayables(payload.payables ?? [])));
+      }
+      if (canReverseJournals) tasks.push(fetch("/api/finance/journal-entries", { cache: "no-store" }).then((response) => parse<{ journalEntries?: JournalEntry[] }>(response, "Could not load journal entries.")).then((payload) => setJournals(payload.journalEntries ?? [])));
+      if (canReadReports) {
+        tasks.push(fetch("/api/finance/reports/trial-balance", { cache: "no-store" }).then((response) => parse<{ report?: AdvancedTrialBalanceReport }>(response, "Could not load trial balance.")).then((payload) => setTrialBalance(payload.report ?? null)));
+        tasks.push(fetch("/api/finance/reports/ar-aging", { cache: "no-store" }).then((response) => parse<{ report?: AdvancedAgingReport }>(response, "Could not load AR aging.")).then((payload) => setArAging(payload.report ?? null)));
+        tasks.push(fetch("/api/finance/reports/ap-aging", { cache: "no-store" }).then((response) => parse<{ report?: AdvancedAgingReport }>(response, "Could not load AP aging.")).then((payload) => setApAging(payload.report ?? null)));
+      }
+      await Promise.all(tasks);
+      setLoaded(true);
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : "Could not load advanced finance data.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadAdvancedFinance();
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function createPeriod(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onError(null);
+    onSuccess(null);
+    setBusy("period-create");
+    try {
+      const response = await fetch("/api/finance/periods", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ periodKey: periodForm.periodKey.trim(), startDate: isoDateInput(periodForm.startDate), endDate: isoDateInput(periodForm.endDate) }),
+      });
+      await parse(response, "Could not create finance period.");
+      setPeriodForm({ periodKey: "", startDate: "", endDate: "" });
+      onSuccess("Finance period created.");
+      await loadAdvancedFinance();
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : "Could not create finance period.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function periodAction(period: AdvancedFinancePeriod, action: "close" | "reopen") {
+    onError(null);
+    onSuccess(null);
+    setBusy(`${action}-${period.id}`);
+    try {
+      const response = await fetch(`/api/finance/periods/${period.id}/${action}`, { method: "POST" });
+      await parse(response, `Could not ${action} period.`);
+      onSuccess(`${period.periodKey} ${action === "close" ? "closed" : "reopened"}.`);
+      await loadAdvancedFinance();
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : `Could not ${action} period.`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function loadPayments(kind: "receivable" | "payable", id: string) {
+    setBusy(`payments-${kind}-${id}`);
+    try {
+      const endpoint = kind === "receivable" ? "receivables" : "payables";
+      const response = await fetch(`/api/finance/${endpoint}/${id}/payments`, { cache: "no-store" });
+      const payload = await parse<{ payments?: AdvancedFinancePayment[] }>(response, `Could not load ${kind} payments.`);
+      setPaymentHistory((current) => ({ ...current, [`${kind}-${id}`]: payload.payments ?? [] }));
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : `Could not load ${kind} payments.`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function createPayment(kind: "receivable" | "payable", id: string) {
+    onError(null);
+    onSuccess(null);
+    const key = `${kind}-${id}`;
+    setBusy(`payment-${key}`);
+    try {
+      const endpoint = kind === "receivable" ? "receivables" : "payables";
+      const response = await fetch(`/api/finance/${endpoint}/${id}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: Number(paymentDrafts[key] || 0), method: "bank_transfer" }),
+      });
+      await parse(response, `Could not record ${kind} payment.`);
+      setPaymentDrafts((current) => ({ ...current, [key]: "" }));
+      onSuccess(`${kind === "receivable" ? "Receivable" : "Payable"} payment recorded.`);
+      await Promise.all([loadAdvancedFinance(), loadPayments(kind, id)]);
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : `Could not record ${kind} payment.`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function reverseJournal(entry: JournalEntry) {
+    const reason = window.prompt("Reason for reversal")?.trim();
+    onError(null);
+    onSuccess(null);
+    setBusy(`reverse-${entry.id}`);
+    try {
+      const response = await fetch(`/api/finance/journal-entries/${entry.id}/reverse`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason || undefined }),
+      });
+      await parse(response, "Could not reverse journal entry.");
+      onSuccess(`${entry.entryNumber} reversed.`);
+      await loadAdvancedFinance();
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : "Could not reverse journal entry.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (!canReadPeriods && !canReadPayments && !canCreatePayments && !canReadReports && !canReverseJournals) return null;
+
+  return (
+    <section className="procurement-section">
+      <div className="section-heading-row"><div><p className="eyebrow">Finance controls</p><h2>Periods, payments, reversals, and reports</h2></div><button className="secondary-button" type="button" onClick={loadAdvancedFinance} disabled={busy === "advanced-load"}>{busy === "advanced-load" ? "Refreshing..." : "Refresh controls"}</button></div>
+      {canReadPeriods ? <div className="finance-control-panel"><div className="section-heading-row"><div><p className="eyebrow">Periods</p><h2>Accounting periods</h2></div><span>{periods.length} periods</span></div>{canManagePeriods ? <form className="procurement-form" onSubmit={createPeriod}><label className="field"><span>Period key</span><input value={periodForm.periodKey} onChange={(event) => setPeriodForm({ ...periodForm, periodKey: event.target.value })} placeholder="2026-01" required /></label><label className="field"><span>Start date</span><input type="date" value={periodForm.startDate} onChange={(event) => setPeriodForm({ ...periodForm, startDate: event.target.value })} required /></label><label className="field"><span>End date</span><input type="date" value={periodForm.endDate} onChange={(event) => setPeriodForm({ ...periodForm, endDate: event.target.value })} required /></label><div className="procurement-actions"><button className="primary-button" type="submit" disabled={busy === "period-create"}>{busy === "period-create" ? "Creating..." : "Create period"}</button></div></form> : null}<div className="users-list">{loaded && periods.length === 0 ? <article className="user-row user-row-empty"><strong>No periods found.</strong></article> : null}{periods.map((period) => <article className="finance-period-row" key={period.id}><div><span>Key</span><strong>{period.periodKey}</strong></div><div><span>Start</span><strong>{dateOnly(period.startDate)}</strong></div><div><span>End</span><strong>{dateOnly(period.endDate)}</strong></div><div><span>Status</span><strong>{period.status}</strong></div><div><span>Closed</span><strong>{dateTime(period.closedAt)}</strong></div><div><span>Closed by</span><strong>{period.closedByUser?.name ?? "-"}</strong></div>{canManagePeriods ? <div className="procurement-row-actions">{period.status === "open" ? <button className="secondary-button" type="button" onClick={() => periodAction(period, "close")} disabled={busy === `close-${period.id}`}>Close</button> : <button className="secondary-button" type="button" onClick={() => periodAction(period, "reopen")} disabled={busy === `reopen-${period.id}`}>Reopen</button>}</div> : null}</article>)}</div></div> : null}
+      {(canReadPayments || canCreatePayments) ? <div className="finance-control-grid"><AdvancedSettlementPanel busy={busy} canCreatePayments={canCreatePayments} canReadPayments={canReadPayments} items={receivables} kind="receivable" paymentDrafts={paymentDrafts} paymentHistory={paymentHistory} onCreatePayment={createPayment} onLoadPayments={loadPayments} onPaymentDraftChange={(key, value) => setPaymentDrafts((current) => ({ ...current, [key]: value }))} /><AdvancedSettlementPanel busy={busy} canCreatePayments={canCreatePayments} canReadPayments={canReadPayments} items={payables} kind="payable" paymentDrafts={paymentDrafts} paymentHistory={paymentHistory} onCreatePayment={createPayment} onLoadPayments={loadPayments} onPaymentDraftChange={(key, value) => setPaymentDrafts((current) => ({ ...current, [key]: value }))} /></div> : null}
+      {canReverseJournals ? <div className="finance-control-panel"><div className="section-heading-row"><div><p className="eyebrow">Journal reversal</p><h2>Posted entries</h2></div><span>{journals.filter((entry) => entry.status === "posted").length} posted</span></div><div className="users-list">{journals.filter((entry) => entry.status === "posted").slice(0, 8).map((entry) => <article className="finance-journal-row" key={entry.id}><div><span>Entry</span><strong>{entry.entryNumber}</strong></div><div><span>Date</span><strong>{dateTime(entry.entryDate)}</strong></div><div><span>Debit</span><strong>{money(entry.totalDebit)}</strong></div><div><span>Credit</span><strong>{money(entry.totalCredit)}</strong></div><div className="procurement-row-actions"><button className="secondary-button" type="button" onClick={() => reverseJournal(entry)} disabled={busy === `reverse-${entry.id}`}>Reverse</button></div></article>)}</div></div> : null}
+      {canReadReports ? <div className="finance-control-panel"><div className="section-heading-row"><div><p className="eyebrow">Reports</p><h2>Trial balance and aging</h2></div><span>{trialBalance?.totals.isBalanced ? "Balanced" : "Review"}</span></div><div className="finance-report-grid"><article className="stat-tile"><span>Trial debit</span><strong>{money(trialBalance?.totals.debit)}</strong></article><article className="stat-tile"><span>Trial credit</span><strong>{money(trialBalance?.totals.credit)}</strong></article><article className="stat-tile"><span>AR outstanding</span><strong>{money(arAging?.totals.totalOutstanding)}</strong></article><article className="stat-tile"><span>AP outstanding</span><strong>{money(apAging?.totals.totalOutstanding)}</strong></article></div><div className="finance-report-grid"><FinanceReportList title="Trial balance" rows={(trialBalance?.rows ?? []).slice(0, 8).map((row) => ({ label: `${row.code} - ${row.name}`, value: `${money(row.debit)} / ${money(row.credit)}`, meta: row.type }))} /><FinanceReportList title="AR aging" rows={(arAging?.items ?? []).slice(0, 8).map((item) => ({ label: item.customerNameSnapshot ?? "Customer", value: money(item.outstanding), meta: item.bucket }))} /><FinanceReportList title="AP aging" rows={(apAging?.items ?? []).slice(0, 8).map((item) => ({ label: item.vendorNameSnapshot ?? "Vendor", value: money(item.outstanding), meta: item.bucket }))} /></div></div> : null}
+    </section>
+  );
+}
+
+function AdvancedSettlementPanel({ busy, canCreatePayments, canReadPayments, items, kind, paymentDrafts, paymentHistory, onCreatePayment, onLoadPayments, onPaymentDraftChange }: { busy: string | null; canCreatePayments: boolean; canReadPayments: boolean; items: Array<Receivable | Payable>; kind: "receivable" | "payable"; paymentDrafts: Record<string, string>; paymentHistory: Record<string, AdvancedFinancePayment[]>; onCreatePayment: (kind: "receivable" | "payable", id: string) => void; onLoadPayments: (kind: "receivable" | "payable", id: string) => void; onPaymentDraftChange: (key: string, value: string) => void }) {
+  const title = kind === "receivable" ? "Receivable payments" : "Payable payments";
+  const openItems = items.filter((item) => item.status !== "paid" && item.status !== "cancelled").slice(0, 6);
+  return <div className="finance-control-panel"><div className="section-heading-row"><div><p className="eyebrow">Payments</p><h2>{title}</h2></div><span>{openItems.length} open</span></div><div className="users-list">{openItems.length === 0 ? <article className="user-row user-row-empty"><strong>No open {kind === "receivable" ? "receivables" : "payables"}.</strong></article> : null}{openItems.map((item) => { const key = `${kind}-${item.id}`; const partyName = kind === "receivable" ? (item as Receivable).customerNameSnapshot : (item as Payable).vendorNameSnapshot; return <article className="finance-payment-row" key={item.id}><div><span>{kind === "receivable" ? "Customer" : "Vendor"}</span><strong>{partyName}</strong></div><div><span>Outstanding</span><strong>{money(Number(item.amount) - Number(item.paidAmount))}</strong></div><div><span>Status</span><strong>{item.status}</strong></div>{canCreatePayments ? <div className="finance-settlement-actions"><input min="0.01" step="0.01" type="number" placeholder="Amount" value={paymentDrafts[key] ?? ""} onChange={(event) => onPaymentDraftChange(key, event.target.value)} /><button className="secondary-button" type="button" disabled={busy === `payment-${key}`} onClick={() => onCreatePayment(kind, item.id)}>Record</button></div> : null}{canReadPayments ? <div className="finance-payment-history"><button className="secondary-button" type="button" disabled={busy === `payments-${kind}-${item.id}`} onClick={() => onLoadPayments(kind, item.id)}>Load history</button>{(paymentHistory[key] ?? []).map((payment) => <span key={payment.id}>{dateOnly(payment.paymentDate)} - {money(payment.amount)} - {payment.method}</span>)}</div> : null}</article>; })}</div></div>;
+}
+
+function FinanceReportList({ title, rows }: { title: string; rows: Array<{ label: string; value: string; meta: string }> }) {
+  return <article className="finance-report-card"><h3>{title}</h3>{rows.length === 0 ? <p className="muted-text">No report rows.</p> : null}{rows.map((row) => <div className="finance-report-row" key={`${title}-${row.label}-${row.meta}`}><span>{row.label}</span><strong>{row.value}</strong><small>{row.meta}</small></div>)}</article>;
 }
 

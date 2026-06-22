@@ -1575,3 +1575,119 @@ button {
     width: 100%;
   }
 }
+
+.finance-control-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.finance-control-grid,
+.finance-report-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.finance-report-grid .stat-tile {
+  min-height: 96px;
+}
+
+.finance-period-row,
+.finance-payment-row {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 16px;
+}
+
+.finance-period-row span,
+.finance-payment-row span,
+.finance-report-row span,
+.finance-report-row small {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.finance-period-row strong,
+.finance-payment-row strong,
+.finance-report-row strong {
+  display: block;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.finance-payment-panel,
+.finance-payment-history {
+  grid-column: 1 / -1;
+}
+
+.finance-payment-history {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.finance-payment-history span {
+  background: #eef6fb;
+  border: 1px solid #cfe3f1;
+  border-radius: 999px;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0;
+  padding: 6px 10px;
+}
+
+.finance-report-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.finance-report-card h3 {
+  font-size: 16px;
+}
+
+.finance-report-row {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1.5fr 1fr auto;
+  padding-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .finance-control-grid,
+  .finance-report-grid,
+  .finance-period-row,
+  .finance-payment-row,
+  .finance-report-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .finance-control-grid,
+  .finance-report-grid,
+  .finance-period-row,
+  .finance-payment-row,
+  .finance-report-row {
+    grid-template-columns: 1fr;
+  }
+}
