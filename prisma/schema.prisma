@@ -554,7 +554,7 @@ model Receivable {
 model Payable {
   id                 String           @id @default(cuid())
   companyId          String
-  purchaseOrderId    String?
+  purchaseOrderId    String?  @unique
   vendorNameSnapshot String
   amount             Decimal          @db.Decimal(12, 2)
   paidAmount         Decimal          @default(0) @db.Decimal(12, 2)

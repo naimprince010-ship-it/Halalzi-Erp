@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
 import { safePurchaseOrderSelect } from "../../_shared";
+import { createPayableForReceivedPurchaseOrder } from "../../_finance-linkage";
 
 function forbiddenError() {
   return new AppError("FORBIDDEN", "You do not have permission to access this purchase order.", 403);
@@ -19,6 +20,8 @@ export async function POST(
     const scope = companyScope(currentUser);
     const { id } = await context.params;
 
+    let payableId: string | null = null;
+
     const received = await prisma.$transaction(async (tx) => {
       const purchaseOrder = await tx.purchaseOrder.findFirst({
         where: {
@@ -28,6 +31,8 @@ export async function POST(
         select: {
           id: true,
           status: true,
+          vendorNameSnapshot: true,
+          totalAmount: true,
           items: {
             select: {
               productId: true,
@@ -69,7 +74,7 @@ export async function POST(
         }
       }
 
-      return tx.purchaseOrder.update({
+      const updatedOrder = await tx.purchaseOrder.update({
         where: { id },
         data: {
           status: "received",
@@ -77,6 +82,18 @@ export async function POST(
         },
         select: safePurchaseOrderSelect,
       });
+
+      // HAL-124: Create the linked payable in the same transaction.
+      // companyId always comes from the authenticated scope — never from the request.
+      const payable = await createPayableForReceivedPurchaseOrder(tx, scope.companyId, {
+        id: updatedOrder.id,
+        vendorNameSnapshot: updatedOrder.vendorNameSnapshot,
+        totalAmount: updatedOrder.totalAmount,
+      });
+
+      payableId = payable.id;
+
+      return updatedOrder;
     });
 
     await recordAuditLog({
@@ -90,6 +107,8 @@ export async function POST(
         purchaseOrderNumber: received.purchaseOrderNumber,
         status: received.status,
         totalAmount: Number(received.totalAmount),
+        payableId: payableId ?? null,
+        financeLinkageCreated: true,
       },
     });
 
