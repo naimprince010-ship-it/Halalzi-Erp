@@ -5,6 +5,7 @@ import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
+import { assertPeriodOpenForDate } from "../../../_periods";
 import { applyPostedJournalBalances, ensureBalanced, safeJournalEntrySelect } from "../../_shared";
 
 type RouteContext = {
@@ -26,6 +27,7 @@ export async function POST(_request: Request, context: RouteContext) {
         select: {
           id: true,
           status: true,
+          entryDate: true,
           totalDebit: true,
           totalCredit: true,
           lines: {
@@ -55,6 +57,7 @@ export async function POST(_request: Request, context: RouteContext) {
         throw new AppError("VALIDATION_ERROR", "At least two journal lines are required before posting.", 400);
       }
 
+      await assertPeriodOpenForDate(tx, scope.companyId, existingEntry.entryDate);
       ensureBalanced(Number(existingEntry.totalDebit), Number(existingEntry.totalCredit));
       await applyPostedJournalBalances(tx, existingEntry.lines);
 

@@ -1,0 +1,330 @@
+{
+  "baseUrl": "http://127.0.0.1:3000",
+  "generatedAt": "2026-06-22T04:31:34.386Z",
+  "startedAt": "2026-06-22T04:31:04.820Z",
+  "totals": {
+    "total": 25,
+    "passed": 25,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "name": "00 prisma connection probe",
+      "ok": true,
+      "details": {}
+    },
+    {
+      "name": "unauth GET /api/finance/periods returns 401",
+      "ok": true,
+      "details": {
+        "status": 401,
+        "body": {
+          "error": {
+            "code": "UNAUTHENTICATED",
+            "message": "Please login to continue."
+          }
+        }
+      }
+    },
+    {
+      "name": "unauth GET /api/finance/reports/trial-balance returns 401",
+      "ok": true,
+      "details": {
+        "status": 401,
+        "body": {
+          "error": {
+            "code": "UNAUTHENTICATED",
+            "message": "Please login to continue."
+          }
+        }
+      }
+    },
+    {
+      "name": "unauth GET /api/finance/reports/ar-aging returns 401",
+      "ok": true,
+      "details": {
+        "status": 401,
+        "body": {
+          "error": {
+            "code": "UNAUTHENTICATED",
+            "message": "Please login to continue."
+          }
+        }
+      }
+    },
+    {
+      "name": "unauth GET /api/finance/reports/ap-aging returns 401",
+      "ok": true,
+      "details": {
+        "status": 401,
+        "body": {
+          "error": {
+            "code": "UNAUTHENTICATED",
+            "message": "Please login to continue."
+          }
+        }
+      }
+    },
+    {
+      "name": "admin registration succeeds",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "other tenant registration succeeds",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "admin can create finance period and injected companyId ignored",
+      "ok": true,
+      "details": {
+        "status": 201
+      }
+    },
+    {
+      "name": "admin can list finance periods",
+      "ok": true,
+      "details": {
+        "status": 200,
+        "count": 1
+      }
+    },
+    {
+      "name": "admin can update finance period",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "admin can close finance period",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "admin can reopen finance period",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "receivable payment create updates paidAmount/status",
+      "ok": true,
+      "details": {
+        "status": 201,
+        "body": {
+          "payment": {
+            "id": "cmqopx7d1002hvsuou29e9591",
+            "receivableId": "cmqopx2il0000x4uovn7riao3",
+            "amount": "400",
+            "paymentDate": "2026-07-01T00:00:00.000Z",
+            "method": "bank_transfer",
+            "reference": "HAL117-RCV",
+            "note": null,
+            "createdByUserId": "cmqopwz700023vsuoqta1e0pa",
+            "createdAt": "2026-06-22T04:31:18.661Z",
+            "createdByUser": {
+              "id": "cmqopwz700023vsuoqta1e0pa",
+              "name": "HAL117 Admin",
+              "email": "hal117-admin-1782102664822@example.com"
+            }
+          },
+          "receivable": {
+            "id": "cmqopx2il0000x4uovn7riao3",
+            "salesOrderId": null,
+            "customerNameSnapshot": "HAL117 Customer",
+            "amount": "1000",
+            "paidAmount": "400",
+            "status": "partial",
+            "dueDate": "2026-06-01T00:00:00.000Z",
+            "createdAt": "2026-06-22T04:31:12.381Z",
+            "updatedAt": "2026-06-22T04:31:18.695Z"
+          }
+        }
+      }
+    },
+    {
+      "name": "receivable payment list works",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "payable payment create updates paidAmount/status",
+      "ok": true,
+      "details": {
+        "status": 201,
+        "body": {
+          "payment": {
+            "id": "cmqopxazx002jvsuolgv8r42s",
+            "payableId": "cmqopx2je0001x4uoq0ahvjok",
+            "amount": "800",
+            "paymentDate": "2026-07-02T00:00:00.000Z",
+            "method": "cash",
+            "reference": "HAL117-PAY",
+            "note": null,
+            "createdByUserId": "cmqopwz700023vsuoqta1e0pa",
+            "createdAt": "2026-06-22T04:31:23.373Z",
+            "createdByUser": {
+              "id": "cmqopwz700023vsuoqta1e0pa",
+              "name": "HAL117 Admin",
+              "email": "hal117-admin-1782102664822@example.com"
+            }
+          },
+          "payable": {
+            "id": "cmqopx2je0001x4uoq0ahvjok",
+            "purchaseOrderId": null,
+            "vendorNameSnapshot": "HAL117 Vendor",
+            "amount": "800",
+            "paidAmount": "800",
+            "status": "paid",
+            "dueDate": "2026-06-02T00:00:00.000Z",
+            "createdAt": "2026-06-22T04:31:12.411Z",
+            "updatedAt": "2026-06-22T04:31:23.409Z"
+          }
+        }
+      }
+    },
+    {
+      "name": "payable payment list works",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "admin can create finance accounts for journal/report setup",
+      "ok": true,
+      "details": {
+        "asset": 201,
+        "income": 201
+      }
+    },
+    {
+      "name": "admin can create balanced journal entry",
+      "ok": true,
+      "details": {
+        "status": 201
+      }
+    },
+    {
+      "name": "admin can post journal while period open",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "admin can reverse posted journal",
+      "ok": true,
+      "details": {
+        "status": 201,
+        "body": {
+          "reversalEntry": {
+            "id": "cmqopxj5r002svsuo28y14tgv",
+            "entryNumber": "JE-20260622-732431",
+            "entryDate": "2026-06-22T04:31:33.913Z",
+            "sourceType": "manual",
+            "sourceId": "cmqopxd8q002nvsuo6fofrdyu",
+            "description": "Reversal of JE-20260622-650306: HAL117 verification",
+            "status": "posted",
+            "totalDebit": "500",
+            "totalCredit": "500",
+            "postedAt": "2026-06-22T04:31:33.940Z",
+            "cancelledAt": null,
+            "createdAt": "2026-06-22T04:31:33.951Z",
+            "updatedAt": "2026-06-22T04:31:33.951Z",
+            "lines": [
+              {
+                "id": "cmqopxj5x002tvsuo0f3k94lo",
+                "accountId": "cmqopxbzw002lvsuoigceigsu",
+                "description": "Cash debit",
+                "debit": "0",
+                "credit": "500",
+                "createdAt": "2026-06-22T04:31:33.951Z",
+                "account": {
+                  "id": "cmqopxbzw002lvsuoigceigsu",
+                  "code": "HAL117-CASH-1782102664822",
+                  "name": "HAL117 Cash",
+                  "type": "asset",
+                  "status": "active"
+                }
+              },
+              {
+                "id": "cmqopxj5x002uvsuo38vngik0",
+                "accountId": "cmqopxc31002mvsuourbmlyfl",
+                "description": "Revenue credit",
+                "debit": "500",
+                "credit": "0",
+                "createdAt": "2026-06-22T04:31:33.951Z",
+                "account": {
+                  "id": "cmqopxc31002mvsuourbmlyfl",
+                  "code": "HAL117-REV-1782102664822",
+                  "name": "HAL117 Revenue",
+                  "type": "income",
+                  "status": "active"
+                }
+              }
+            ]
+          },
+          "reversal": {
+            "id": "cmqopxj6n002vvsuorbbphnik",
+            "originalJournalEntryId": "cmqopxd8q002nvsuo6fofrdyu",
+            "reversalJournalEntryId": "cmqopxj5r002svsuo28y14tgv",
+            "reason": "HAL117 verification",
+            "createdByUserId": "cmqopwz700023vsuoqta1e0pa",
+            "createdAt": "2026-06-22T04:31:33.983Z"
+          }
+        }
+      }
+    },
+    {
+      "name": "trial balance report works",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "AR aging report works",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "AP aging report works",
+      "ok": true,
+      "details": {
+        "status": 200
+      }
+    },
+    {
+      "name": "cross-company access denied with 403",
+      "ok": true,
+      "details": {
+        "status": 403,
+        "body": {
+          "error": {
+            "code": "FORBIDDEN",
+            "message": "You do not have permission to access payments for this receivable."
+          }
+        }
+      }
+    },
+    {
+      "name": "safe response fields only",
+      "ok": true,
+      "details": {}
+    }
+  ]
+}

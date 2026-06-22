@@ -81,6 +81,19 @@ enum SettlementStatus {
   cancelled
 }
 
+enum FinancePeriodStatus {
+  open
+  closed
+}
+
+enum FinancePaymentMethod {
+  cash
+  bank_transfer
+  card
+  cheque
+  other
+}
+
 enum LeadStage {
   new
   contacted
@@ -155,6 +168,10 @@ model Company {
   journalEntries   JournalEntry[]
   receivables      Receivable[]
   payables         Payable[]
+  financePeriods   FinancePeriod[]
+  receivablePayments ReceivablePayment[]
+  payablePayments  PayablePayment[]
+  journalReversals JournalReversal[]
   auditLogs        AuditLog[]
   leads            Lead[]
   customerContacts CustomerContact[]
@@ -257,6 +274,10 @@ model User {
   assignedSalesTasks      SalesTask[]              @relation("SalesTaskAssignee")
   createdSalesTasks       SalesTask[]              @relation("SalesTaskCreator")
   changedDealStages       DealStageHistory[]       @relation("DealStageChangedBy")
+  closedFinancePeriods    FinancePeriod[]          @relation("FinancePeriodClosedBy")
+  createdReceivablePayments ReceivablePayment[]    @relation("ReceivablePaymentCreatedBy")
+  createdPayablePayments  PayablePayment[]         @relation("PayablePaymentCreatedBy")
+  createdJournalReversals JournalReversal[]        @relation("JournalReversalCreatedBy")
 
   @@index([companyId])
   @@index([status])
@@ -484,6 +505,8 @@ model JournalEntry {
 
   company Company            @relation(fields: [companyId], references: [id])
   lines   JournalEntryLine[]
+  asOriginalReversal JournalReversal? @relation("JournalReversalOriginal")
+  asReversalEntry JournalReversal?    @relation("JournalReversalReversal")
 
   @@unique([companyId, entryNumber])
   @@index([companyId])
@@ -521,6 +544,7 @@ model Receivable {
   updatedAt            DateTime         @updatedAt
 
   company Company @relation(fields: [companyId], references: [id])
+  payments ReceivablePayment[]
 
   @@index([companyId])
   @@index([status])
@@ -540,10 +564,98 @@ model Payable {
   updatedAt          DateTime         @updatedAt
 
   company Company @relation(fields: [companyId], references: [id])
+  payments PayablePayment[]
 
   @@index([companyId])
   @@index([status])
   @@index([purchaseOrderId])
+}
+
+model FinancePeriod {
+  id             String            @id @default(cuid())
+  companyId      String
+  periodKey      String
+  startDate      DateTime
+  endDate        DateTime
+  status         FinancePeriodStatus @default(open)
+  closedAt       DateTime?
+  closedByUserId String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  company      Company @relation(fields: [companyId], references: [id])
+  closedByUser User?   @relation("FinancePeriodClosedBy", fields: [closedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, periodKey])
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model ReceivablePayment {
+  id              String              @id @default(cuid())
+  companyId       String
+  receivableId    String
+  amount          Decimal             @db.Decimal(12, 2)
+  paymentDate     DateTime            @default(now())
+  method          FinancePaymentMethod @default(bank_transfer)
+  reference       String?
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime            @default(now())
+
+  company       Company    @relation(fields: [companyId], references: [id])
+  receivable    Receivable @relation(fields: [receivableId], references: [id])
+  createdByUser User?      @relation("ReceivablePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([receivableId])
+  @@index([createdByUserId])
+  @@index([paymentDate])
+  @@index([companyId, paymentDate])
+}
+
+model PayablePayment {
+  id              String              @id @default(cuid())
+  companyId       String
+  payableId       String
+  amount          Decimal             @db.Decimal(12, 2)
+  paymentDate     DateTime            @default(now())
+  method          FinancePaymentMethod @default(bank_transfer)
+  reference       String?
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime            @default(now())
+
+  company       Company   @relation(fields: [companyId], references: [id])
+  payable       Payable   @relation(fields: [payableId], references: [id])
+  createdByUser User?     @relation("PayablePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([payableId])
+  @@index([createdByUserId])
+  @@index([paymentDate])
+  @@index([companyId, paymentDate])
+}
+
+model JournalReversal {
+  id                   String   @id @default(cuid())
+  companyId            String
+  originalJournalEntryId String @unique
+  reversalJournalEntryId String @unique
+  reason               String?
+  createdByUserId      String?
+  createdAt            DateTime @default(now())
+
+  company              Company      @relation(fields: [companyId], references: [id])
+  originalJournalEntry JournalEntry @relation("JournalReversalOriginal", fields: [originalJournalEntryId], references: [id])
+  reversalJournalEntry JournalEntry @relation("JournalReversalReversal", fields: [reversalJournalEntryId], references: [id])
+  createdByUser        User?        @relation("JournalReversalCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([createdByUserId])
+  @@index([createdAt])
 }
 
 model Lead {
