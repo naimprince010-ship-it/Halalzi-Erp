@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
 import { safeSalesOrderSelect } from "../../_shared";
+import { cancelReceivableForSalesOrder } from "../../_finance-linkage";
 
 function notFoundError() {
   return new AppError("FORBIDDEN", "You do not have permission to access this sales order.", 403);
@@ -15,6 +16,10 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     const currentUser = await requirePermission("sales.cancel");
     const scope = companyScope(currentUser);
     const { id } = await context.params;
+
+    let receivableId: string | null = null;
+    let receivableStatus: string | null = null;
+    let financeCancellationAction: string | null = null;
 
     const cancelled = await prisma.$transaction(async (tx) => {
       const order = await tx.salesOrder.findFirst({
@@ -47,6 +52,16 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       }
 
       if (order.status === "confirmed") {
+        // HAL-123: Handle the linked receivable before restoring stock.
+        // This may throw a 400 if the receivable has recorded payments.
+        const receivableResult = await cancelReceivableForSalesOrder(tx, scope.companyId, order.id);
+
+        if (receivableResult) {
+          receivableId = receivableResult.id;
+          receivableStatus = receivableResult.status;
+          financeCancellationAction = "receivable_cancelled";
+        }
+
         for (const item of order.items) {
           const updated = await tx.product.updateMany({
             where: {
@@ -85,6 +100,9 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         orderNumber: cancelled.orderNumber,
         status: cancelled.status,
         totalAmount: Number(cancelled.totalAmount),
+        receivableId: receivableId,
+        receivableStatus: receivableStatus,
+        financeCancellationAction: financeCancellationAction,
       },
     });
 

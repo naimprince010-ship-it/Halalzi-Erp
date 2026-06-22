@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
 import { safeSalesOrderSelect } from "../../_shared";
+import { createReceivableForConfirmedSalesOrder } from "../../_finance-linkage";
 
 function notFoundError() {
   return new AppError("FORBIDDEN", "You do not have permission to access this sales order.", 403);
@@ -16,6 +17,8 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     const scope = companyScope(currentUser);
     const { id } = await context.params;
 
+    let receivableId: string | null = null;
+
     const confirmed = await prisma.$transaction(async (tx) => {
       const order = await tx.salesOrder.findFirst({
         where: {
@@ -25,6 +28,9 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         select: {
           id: true,
           status: true,
+          customerName: true,
+          totalAmount: true,
+          orderNumber: true,
           items: {
             select: {
               productId: true,
@@ -94,7 +100,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         }
       }
 
-      return tx.salesOrder.update({
+      const updatedOrder = await tx.salesOrder.update({
         where: { id },
         data: {
           status: "confirmed",
@@ -102,6 +108,19 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         },
         select: safeSalesOrderSelect,
       });
+
+      // HAL-123: Create the linked receivable in the same transaction.
+      // companyId always comes from the authenticated scope — never from the request.
+      const receivable = await createReceivableForConfirmedSalesOrder(tx, scope.companyId, {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        customerName: order.customerName,
+        totalAmount: order.totalAmount,
+      });
+
+      receivableId = receivable.id;
+
+      return updatedOrder;
     });
 
     await recordAuditLog({
@@ -115,6 +134,8 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         orderNumber: confirmed.orderNumber,
         status: confirmed.status,
         totalAmount: Number(confirmed.totalAmount),
+        receivableId: receivableId ?? null,
+        financeLinkageCreated: true,
       },
     });
 

@@ -534,7 +534,7 @@ model JournalEntryLine {
 model Receivable {
   id                   String           @id @default(cuid())
   companyId            String
-  salesOrderId         String?
+  salesOrderId         String?  @unique
   customerNameSnapshot String
   amount               Decimal          @db.Decimal(12, 2)
   paidAmount           Decimal          @default(0) @db.Decimal(12, 2)
