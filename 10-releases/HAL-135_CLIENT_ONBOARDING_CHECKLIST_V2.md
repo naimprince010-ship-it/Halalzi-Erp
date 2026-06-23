@@ -35,7 +35,7 @@ Use this checklist for each new pilot customer in this sequence:
 - [ ] Latest Vercel deployment is `Ready` (check Vercel dashboard).
 - [ ] No high-severity errors in Vercel runtime logs (last 7 days).
 - [ ] Database connection is stable (Neon status page green).
-- [ ] Custom email sender domain is verified in Resend (currently: **NOT YET** — using sandbox; document plan for client).
+- [ ] Custom email sender domain is verified in Resend (currently: **NOT YET** - using sandbox; document plan for client).
 
 ### Demo Admin Credentials (IMPORTANT: No Secrets in Shared Notes)
 
@@ -98,14 +98,14 @@ Use this checklist for each new pilot customer in this sequence:
 
 Follow the structured pilot demo flow from HAL-134:
 
-1. **Auth/Login (3-5 min)** — Explain tenant isolation and role-based access.
-2. **Dashboard Overview (4-6 min)** — Show operational summaries.
-3. **Products and Stock (4-6 min)** — Highlight DEMO-SKU naming and stock traceability.
-4. **Sales Flow (5-7 min)** — Demonstrate confirm/cancel workflow.
-5. **Procurement Flow (5-7 min)** — Demonstrate receive/cancel workflow.
-6. **Finance Flow (5-7 min)** — Show receivables, payables, reports.
-7. **CRM Overview (3-5 min)** — Show leads/deals/tasks pipeline.
-8. **Audit and Export (3-5 min)** — Explain accountability trail, confirm no sensitive data leakage.
+1. **Auth/Login (3-5 min)** - Explain tenant isolation and role-based access.
+2. **Dashboard Overview (4-6 min)** - Show operational summaries.
+3. **Products and Stock (4-6 min)** - Highlight DEMO-SKU naming and stock traceability.
+4. **Sales Flow (5-7 min)** - Demonstrate confirm/cancel workflow.
+5. **Procurement Flow (5-7 min)** - Demonstrate receive/cancel workflow.
+6. **Finance Flow (5-7 min)** - Show receivables, payables, reports.
+7. **CRM Overview (3-5 min)** - Show leads/deals/tasks pipeline.
+8. **Audit and Export (3-5 min)** - Explain accountability trail, confirm no sensitive data leakage.
 
 ### Live Demo Notes (Do Not Print Secrets)
 
@@ -136,7 +136,7 @@ Use the **Demo Feedback Capture Template** section to record customer observatio
 - **Strongest Fit:** Which module(s) solve their biggest pain?
 - **Weakest Fit:** Any module that felt incomplete or confusing?
 - **Workflow Blockers:** Any step that they said was missing or awkward?
-- **Feature Requests:** Any "it would be great if…" items mentioned?
+- **Feature Requests:** Any "it would be great if..." items mentioned?
 - **Confidence Level:** On 1-5 scale, how likely to pilot (1=not interested, 5=ready to sign)?
 
 ### Pilot Decision Assessment
@@ -262,11 +262,11 @@ Copy this template and fill it out after each demo call. Do **not** invent feedb
 **Customer Verbatim:** [Quote what they said about their strongest fit]
 
 **Weakest Module Fit (Which felt incomplete or confusing?):**
-- [ ] Sales workflows — Reason: _________________
-- [ ] Procurement and inventory — Reason: _________________
-- [ ] Finance and reporting — Reason: _________________
-- [ ] CRM and customer tracking — Reason: _________________
-- [ ] General UX/navigation — Reason: _________________
+- [ ] Sales workflows - Reason: _________________
+- [ ] Procurement and inventory - Reason: _________________
+- [ ] Finance and reporting - Reason: _________________
+- [ ] CRM and customer tracking - Reason: _________________
+- [ ] General UX/navigation - Reason: _________________
 - [ ] Not applicable / all areas looked good
 
 **Customer Verbatim:** [Quote what they said about weaknesses]
@@ -316,19 +316,19 @@ Use this during onboarding to understand the customer's actual operational needs
 
 Rank these 1-5 (1=not a pain, 5=critical pain):
 
-- [ ] **Sales:** Tracking orders, quotes, delivery, payments — Score: [ ]
+- [ ] **Sales:** Tracking orders, quotes, delivery, payments - Score: [ ]
   - Details: _________________________________________
 
-- [ ] **Procurement:** Finding vendors, managing POs, receiving goods, payment — Score: [ ]
+- [ ] **Procurement:** Finding vendors, managing POs, receiving goods, payment - Score: [ ]
   - Details: _________________________________________
 
-- [ ] **Inventory:** Stock accuracy, low-stock alerts, location tracking — Score: [ ]
+- [ ] **Inventory:** Stock accuracy, low-stock alerts, location tracking - Score: [ ]
   - Details: _________________________________________
 
-- [ ] **Finance:** Invoice tracking, aging, cash flow, monthly close — Score: [ ]
+- [ ] **Finance:** Invoice tracking, aging, cash flow, monthly close - Score: [ ]
   - Details: _________________________________________
 
-- [ ] **CRM:** Lead tracking, follow-ups, pipeline visibility — Score: [ ]
+- [ ] **CRM:** Lead tracking, follow-ups, pipeline visibility - Score: [ ]
   - Details: _________________________________________
 
 ### Data and Integration Needs
@@ -465,7 +465,7 @@ Use this table to track the most common blockers that prevent pilots from moving
 |---------|-----------|------------|----------|--------------|-------------------|
 | Email domain verification not complete | ___ | _________ | Medium | Verify custom domain in Resend | HAL-90 |
 | Data import tooling missing | ___ | _________ | High | Build import UI for products/vendors | HAL-24 |
-| Quotation/invoice workflow not available | ___ | _________ | High | Build sales quote → invoice | HAL-23 |
+| Quotation/invoice workflow not available | ___ | _________ | High | Build sales quote -> invoice | HAL-23 |
 | Mobile app not available | ___ | _________ | Medium | Add responsive mobile UI or app | Roadmap |
 | API documentation incomplete | ___ | _________ | Low | Expand API docs with examples | HAL-41 |
 | (Add your own blockers below) | ___ | _________ | ___ | __________ | __________ |
@@ -498,14 +498,14 @@ Use this table to track the most common blockers that prevent pilots from moving
 
 Pause onboarding and escalate if any of these are true:
 
-- [ ] ❌ Customer's data includes unencrypted PII or regulated data that we are not legally approved to store.
-- [ ] ❌ Customer expects 24/7 support, SLA guarantees, or compliance certifications we don't have.
-- [ ] ❌ Customer expects production data migration on day 1; data migration and testing takes 2-4 weeks.
-- [ ] ❌ Customer demands feature X that doesn't exist and isn't on Q2 roadmap.
-- [ ] ❌ Customer's primary use case is not covered by HAL-130 Roadmap (e.g., HRM, advanced analytics).
-- [ ] ❌ Customer requires integration (e.g., bank feeds, QuickBooks) that we don't support.
-- [ ] ❌ Customer is unwilling to accept bug-fix iterations; wants stable, complete product.
-- [ ] ❌ Customer relationship/communication has been poor; unlikely to provide constructive feedback.
+- [ ] Customer's data includes unencrypted PII or regulated data that we are not legally approved to store.
+- [ ] Customer expects 24/7 support, SLA guarantees, or compliance certifications we don't have.
+- [ ] Customer expects production data migration on day 1; data migration and testing takes 2-4 weeks.
+- [ ] Customer demands feature X that doesn't exist and isn't on Q2 roadmap.
+- [ ] Customer's primary use case is not covered by HAL-130 Roadmap (e.g., HRM, advanced analytics).
+- [ ] Customer requires integration (e.g., bank feeds, QuickBooks) that we don't support.
+- [ ] Customer is unwilling to accept bug-fix iterations; wants stable, complete product.
+- [ ] Customer relationship/communication has been poor; unlikely to provide constructive feedback.
 
 **If any of the above apply:** Document reason, escalate to founder, and schedule follow-up conversation after roadmap progress.
 
@@ -565,11 +565,11 @@ Expected: Zero failures.
 ## Completion and Handoff
 
 **HAL-135 deliverables:**
-- ✅ Comprehensive v2 onboarding checklist with pre-demo, demo-day, post-demo, and pilot-go-live phases.
-- ✅ Integrated feedback capture templates (demo feedback, pilot readiness rubric, blocker tracker).
-- ✅ Clear guardrails on security, credentials, and "do not proceed if" rules.
-- ✅ Mapping to next Linear issues based on real pilot feedback.
-- ✅ Lint and build verification passed.
+- Complete: Comprehensive v2 onboarding checklist with pre-demo, demo-day, post-demo, and pilot-go-live phases.
+- Complete: Integrated feedback capture templates (demo feedback, pilot readiness rubric, blocker tracker).
+- Complete: Clear guardrails on security, credentials, and "do not proceed if" rules.
+- Complete: Mapping to next Linear issues based on real pilot feedback.
+- Complete: Lint and build verification passed.
 
 **How to use:**
 1. Print this checklist (or keep it open in a separate tab).
