@@ -5,6 +5,7 @@ import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
+import { recordProductOpeningBalance } from "./_stock-ledger";
 
 const decimalInputSchema = z
   .union([z.number(), z.string()])
@@ -74,18 +75,32 @@ export async function POST(request: Request) {
     const scope = companyScope(currentUser);
     const input = createProductSchema.parse(await request.json());
 
-    const product = await prisma.product.create({
-      data: {
-        companyId: scope.companyId,
-        name: input.name,
-        sku: input.sku,
-        category: input.category,
-        salePrice: input.salePrice,
-        costPrice: input.costPrice,
-        stockQuantity: input.stockQuantity,
-        status: input.status ?? "active",
-      },
-      select: safeProductSelect,
+    let stockLedgerEntryId: string | null = null;
+
+    const product = await prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: {
+          companyId: scope.companyId,
+          name: input.name,
+          sku: input.sku,
+          category: input.category,
+          salePrice: input.salePrice,
+          costPrice: input.costPrice,
+          stockQuantity: input.stockQuantity,
+          status: input.status ?? "active",
+        },
+        select: safeProductSelect,
+      });
+
+      const stockLedgerEntry = await recordProductOpeningBalance(tx, scope.companyId, {
+        productId: created.id,
+        stockQuantity: created.stockQuantity,
+        createdByUserId: currentUser.user.id,
+      });
+
+      stockLedgerEntryId = stockLedgerEntry?.id ?? null;
+
+      return created;
     });
 
     await recordAuditLog({
@@ -99,6 +114,7 @@ export async function POST(request: Request) {
         sku: product.sku,
         status: product.status,
         stockQuantity: product.stockQuantity,
+        stockLedgerEntryId,
       },
     });
 

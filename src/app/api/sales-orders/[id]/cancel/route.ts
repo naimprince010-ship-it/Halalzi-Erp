@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
 import { safeSalesOrderSelect } from "../../_shared";
 import { cancelReceivableForSalesOrder } from "../../_finance-linkage";
+import { recordStockLedgerEntry } from "@/app/api/products/_stock-ledger";
 
 function notFoundError() {
   return new AppError("FORBIDDEN", "You do not have permission to access this sales order.", 403);
@@ -20,6 +21,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     let receivableId: string | null = null;
     let receivableStatus: string | null = null;
     let financeCancellationAction: string | null = null;
+    const stockLedgerEntryIds: string[] = [];
 
     const cancelled = await prisma.$transaction(async (tx) => {
       const order = await tx.salesOrder.findFirst({
@@ -76,6 +78,16 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
           if (updated.count !== 1) {
             throw new AppError("VALIDATION_ERROR", "Unable to restore stock for cancelled order.", 400);
           }
+
+          const stockLedgerEntry = await recordStockLedgerEntry(tx, scope.companyId, {
+            productId: item.productId,
+            type: "sales_order_cancel",
+            sourceType: "sales_order",
+            sourceId: order.id,
+            quantityDelta: item.quantity,
+            createdByUserId: currentUser.user.id,
+          });
+          stockLedgerEntryIds.push(stockLedgerEntry.id);
         }
       }
 
@@ -103,6 +115,8 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         receivableId: receivableId,
         receivableStatus: receivableStatus,
         financeCancellationAction: financeCancellationAction,
+        stockLedgerEntryIds: stockLedgerEntryIds.join(",") || null,
+        stockMovementCount: stockLedgerEntryIds.length,
       },
     });
 

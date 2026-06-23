@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
 import { safePurchaseOrderSelect } from "../../_shared";
 import { createPayableForReceivedPurchaseOrder } from "../../_finance-linkage";
+import { recordStockLedgerEntry } from "@/app/api/products/_stock-ledger";
 
 function forbiddenError() {
   return new AppError("FORBIDDEN", "You do not have permission to access this purchase order.", 403);
@@ -21,6 +22,7 @@ export async function POST(
     const { id } = await context.params;
 
     let payableId: string | null = null;
+    const stockLedgerEntryIds: string[] = [];
 
     const received = await prisma.$transaction(async (tx) => {
       const purchaseOrder = await tx.purchaseOrder.findFirst({
@@ -72,6 +74,16 @@ export async function POST(
         if (updated.count !== 1) {
           throw new AppError("FORBIDDEN", "One or more products are not accessible.", 403);
         }
+
+        const stockLedgerEntry = await recordStockLedgerEntry(tx, scope.companyId, {
+          productId: item.productId,
+          type: "purchase_order_receive",
+          sourceType: "purchase_order",
+          sourceId: purchaseOrder.id,
+          quantityDelta: item.quantity,
+          createdByUserId: currentUser.user.id,
+        });
+        stockLedgerEntryIds.push(stockLedgerEntry.id);
       }
 
       const updatedOrder = await tx.purchaseOrder.update({
@@ -109,6 +121,8 @@ export async function POST(
         totalAmount: Number(received.totalAmount),
         payableId: payableId ?? null,
         financeLinkageCreated: true,
+        stockLedgerEntryIds: stockLedgerEntryIds.join(",") || null,
+        stockMovementCount: stockLedgerEntryIds.length,
       },
     });
 

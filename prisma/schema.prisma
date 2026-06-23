@@ -94,6 +94,21 @@ enum FinancePaymentMethod {
   other
 }
 
+enum StockLedgerEntryType {
+  opening_balance
+  manual_adjustment
+  sales_order_confirm
+  sales_order_cancel
+  purchase_order_receive
+  purchase_order_cancel
+}
+
+enum StockLedgerSourceType {
+  product
+  sales_order
+  purchase_order
+}
+
 enum LeadStage {
   new
   contacted
@@ -172,6 +187,7 @@ model Company {
   receivablePayments ReceivablePayment[]
   payablePayments  PayablePayment[]
   journalReversals JournalReversal[]
+  stockLedgerEntries StockLedgerEntry[]
   auditLogs        AuditLog[]
   leads            Lead[]
   customerContacts CustomerContact[]
@@ -200,6 +216,7 @@ model Product {
   company            Company             @relation(fields: [companyId], references: [id])
   salesOrderItems    SalesOrderItem[]
   purchaseOrderItems PurchaseOrderItem[]
+  stockLedgerEntries StockLedgerEntry[]
 
   @@unique([companyId, sku])
   @@index([companyId])
@@ -278,6 +295,7 @@ model User {
   createdReceivablePayments ReceivablePayment[]    @relation("ReceivablePaymentCreatedBy")
   createdPayablePayments  PayablePayment[]         @relation("PayablePaymentCreatedBy")
   createdJournalReversals JournalReversal[]        @relation("JournalReversalCreatedBy")
+  createdStockLedgerEntries StockLedgerEntry[]
 
   @@index([companyId])
   @@index([status])
@@ -637,6 +655,32 @@ model PayablePayment {
   @@index([createdByUserId])
   @@index([paymentDate])
   @@index([companyId, paymentDate])
+}
+
+model StockLedgerEntry {
+  id              String                @id @default(cuid())
+  companyId       String
+  productId       String
+  type            StockLedgerEntryType
+  sourceType      StockLedgerSourceType
+  sourceId        String
+  quantityDelta   Int
+  balanceBefore   Int
+  balanceAfter    Int
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime              @default(now())
+
+  company       Company @relation(fields: [companyId], references: [id])
+  product       Product @relation(fields: [productId], references: [id])
+  createdByUser User?   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([productId])
+  @@index([createdByUserId])
+  @@index([sourceType, sourceId])
+  @@index([companyId, productId, createdAt])
+  @@index([companyId, sourceType, sourceId])
 }
 
 model JournalReversal {

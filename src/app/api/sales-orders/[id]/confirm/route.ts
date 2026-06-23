@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
 import { safeSalesOrderSelect } from "../../_shared";
 import { createReceivableForConfirmedSalesOrder } from "../../_finance-linkage";
+import { recordStockLedgerEntry } from "@/app/api/products/_stock-ledger";
 
 function notFoundError() {
   return new AppError("FORBIDDEN", "You do not have permission to access this sales order.", 403);
@@ -18,6 +19,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     const { id } = await context.params;
 
     let receivableId: string | null = null;
+    const stockLedgerEntryIds: string[] = [];
 
     const confirmed = await prisma.$transaction(async (tx) => {
       const order = await tx.salesOrder.findFirst({
@@ -98,6 +100,16 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         if (updated.count !== 1) {
           throw new AppError("VALIDATION_ERROR", "Insufficient stock while confirming order.", 400);
         }
+
+        const stockLedgerEntry = await recordStockLedgerEntry(tx, scope.companyId, {
+          productId: item.productId,
+          type: "sales_order_confirm",
+          sourceType: "sales_order",
+          sourceId: order.id,
+          quantityDelta: -item.quantity,
+          createdByUserId: currentUser.user.id,
+        });
+        stockLedgerEntryIds.push(stockLedgerEntry.id);
       }
 
       const updatedOrder = await tx.salesOrder.update({
@@ -136,6 +148,8 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         totalAmount: Number(confirmed.totalAmount),
         receivableId: receivableId ?? null,
         financeLinkageCreated: true,
+        stockLedgerEntryIds: stockLedgerEntryIds.join(",") || null,
+        stockMovementCount: stockLedgerEntryIds.length,
       },
     });
 

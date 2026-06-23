@@ -5,6 +5,7 @@ import { recordAuditLog } from "@/lib/audit/audit-log";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
+import { recordManualStockAdjustment } from "../_stock-ledger";
 
 const decimalInputSchema = z
   .union([z.number(), z.string()])
@@ -126,20 +127,40 @@ export async function PATCH(
       throw new AppError("FORBIDDEN", "You do not have permission to adjust stock quantity.", 403);
     }
 
-    const product = await prisma.product.update({
-      where: {
-        id,
-      },
-      data: {
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.sku !== undefined ? { sku: input.sku } : {}),
-        ...(input.category !== undefined ? { category: input.category } : {}),
-        ...(input.salePrice !== undefined ? { salePrice: input.salePrice } : {}),
-        ...(input.costPrice !== undefined ? { costPrice: input.costPrice } : {}),
-        ...(input.stockQuantity !== undefined ? { stockQuantity: input.stockQuantity } : {}),
-        ...(input.status !== undefined ? { status: input.status } : {}),
-      },
-      select: safeProductSelect,
+    let stockLedgerEntryId: string | null = null;
+
+    const product = await prisma.$transaction(async (tx) => {
+      const updated = await tx.product.update({
+        where: {
+          id,
+        },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.sku !== undefined ? { sku: input.sku } : {}),
+          ...(input.category !== undefined ? { category: input.category } : {}),
+          ...(input.salePrice !== undefined ? { salePrice: input.salePrice } : {}),
+          ...(input.costPrice !== undefined ? { costPrice: input.costPrice } : {}),
+          ...(input.stockQuantity !== undefined ? { stockQuantity: input.stockQuantity } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+        },
+        select: safeProductSelect,
+      });
+
+      if (
+        input.stockQuantity !== undefined &&
+        input.stockQuantity !== existingProduct.stockQuantity
+      ) {
+        const stockLedgerEntry = await recordManualStockAdjustment(tx, scope.companyId, {
+          productId: id,
+          balanceBefore: existingProduct.stockQuantity,
+          balanceAfter: updated.stockQuantity,
+          createdByUserId: currentUser.user.id,
+        });
+
+        stockLedgerEntryId = stockLedgerEntry?.id ?? null;
+      }
+
+      return updated;
     });
 
     await recordAuditLog({
@@ -153,6 +174,7 @@ export async function PATCH(
         sku: product.sku,
         status: product.status,
         stockAdjusted: input.stockQuantity !== undefined,
+        stockLedgerEntryId,
       },
     });
 
