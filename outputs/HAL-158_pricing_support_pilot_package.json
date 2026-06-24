@@ -1,0 +1,11 @@
+{
+  "issue": "HAL-135",
+  "subIssue": "HAL-158",
+  "status": "Done",
+  "documentPath": "10-releases/HAL-158_PRICING_SUPPORT_PILOT_PACKAGE.md",
+  "artifactPath": "outputs/HAL-158_pricing_support_pilot_package.json",
+  "pilotPricing": "5,000 BDT/month",
+  "standardPricing": "10,000 BDT/month",
+  "founderCap": 5,
+  "recommendation": "GO - Pricing and support plan are defined and safeguard solo founder burnout."
+}
