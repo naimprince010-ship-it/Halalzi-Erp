@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
+import { FinanceInvoiceSummaryPanel } from "@/components/finance/FinanceInvoiceSummaryPanel";
 
 type AccountType = "asset" | "liability" | "equity" | "income" | "expense";
 type AccountStatus = "active" | "inactive";
@@ -510,6 +511,8 @@ export default function FinanceDashboardPage() {
                 <strong>{draftJournals}</strong>
               </article>
             </section>
+
+            <FinanceInvoiceSummaryPanel />
 
             <FinanceAdvancedPanel currentUser={currentUser} onError={setError} onSuccess={setSuccess} />
 

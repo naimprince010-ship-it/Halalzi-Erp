@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
 import { downloadCsvExport } from "@/lib/export/export-client";
+import { SalesQuoteInvoicePanel } from "@/components/sales/SalesQuoteInvoicePanel";
 
 type SalesOrderStatus = "draft" | "confirmed" | "cancelled" | "completed";
 
@@ -588,6 +589,14 @@ export default function SalesDashboardPage() {
             {editSuccess ? <div className="form-success">{editSuccess}</div> : null}
             {actionError ? <div className="form-error">{actionError}</div> : null}
             {actionSuccess ? <div className="form-success">{actionSuccess}</div> : null}
+
+            <SalesQuoteInvoicePanel
+              orders={orders}
+              products={activeProducts}
+              productsLoading={productsLoading}
+              permissions={currentUser.permissions}
+              onOrdersChanged={loadSalesOrders}
+            />
 
             {canCreateSales ? (
               <section className="users-create-panel" aria-label="Create sales order panel">

@@ -23,6 +23,7 @@
     "admin:ensure": "node scripts/ensure-admin-user.mjs",
     "check:env": "node scripts/check-production-env.mjs",
     "regression:hal99": "node scripts/hal99-final-regression.mjs",
+    "verify:hal137": "node scripts/hal137-quotation-invoice-verification.mjs",
     "build:migrate": "prisma generate && node scripts/production-migrate-deploy.mjs && next build",
     "check": "npm run lint && npm run build:ci"
   },

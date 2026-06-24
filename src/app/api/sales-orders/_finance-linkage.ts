@@ -53,6 +53,29 @@ export async function createReceivableForConfirmedSalesOrder(
   return receivable;
 }
 
+export async function findOrCreateReceivableForSalesOrder(
+  tx: TransactionClient,
+  companyId: string,
+  salesOrder: SalesOrderForLinkage,
+): Promise<{ id: string; status: string }> {
+  const existing = await tx.receivable.findFirst({
+    where: {
+      companyId,
+      salesOrderId: salesOrder.id,
+    },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  return createReceivableForConfirmedSalesOrder(tx, companyId, salesOrder);
+}
+
 /**
  * Finds the linked receivable for a confirmed sales order and cancels it
  * if it has no payments recorded.
