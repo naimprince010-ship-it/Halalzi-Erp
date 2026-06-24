@@ -1,0 +1,74 @@
+{
+  "issue": "HAL-132",
+  "subIssue": "HAL-155",
+  "status": "Done",
+  "generatedAt": "2026-06-24T21:30:33+06:00",
+  "decision": "CONDITIONAL_GO",
+  "scope": "First controlled paid pilot, not broad public SaaS launch",
+  "documentPath": "10-releases/HAL-155_PAID_CLIENT_LAUNCH_CHECKLIST.md",
+  "artifactPath": "outputs/HAL-155_paid_client_launch_checklist.json",
+  "evidence": [
+    {
+      "gate": "Core ERP production signoff",
+      "status": "PASS",
+      "path": "10-releases/HAL-129_CORE_ERP_MVP_PRODUCTION_RELEASE_SIGNOFF.md"
+    },
+    {
+      "gate": "Authenticated production smoke runbook",
+      "status": "READY",
+      "path": "10-releases/HAL-132_AUTHENTICATED_PRODUCTION_SMOKE.md"
+    },
+    {
+      "gate": "Purchase approval workflow",
+      "status": "PASS",
+      "path": "outputs/HAL-143_purchase_approval_workflow_verification.json"
+    },
+    {
+      "gate": "Role templates and onboarding presets",
+      "status": "PASS",
+      "path": "outputs/HAL-144_role_templates_onboarding_verification.json"
+    },
+    {
+      "gate": "Performance and security review",
+      "status": "GO",
+      "path": "10-releases/HAL-157_PERFORMANCE_SECURITY_REVIEW.md"
+    },
+    {
+      "gate": "Pricing, support, and pilot package",
+      "status": "GO",
+      "path": "10-releases/HAL-158_PRICING_SUPPORT_PILOT_PACKAGE.md"
+    },
+    {
+      "gate": "Backup and restore posture",
+      "status": "DOCUMENTED",
+      "path": "BACKUP_RESTORE.md"
+    },
+    {
+      "gate": "Migration baseline path",
+      "status": "DOCUMENTED_ATTENTION",
+      "path": "MIGRATIONS.md"
+    }
+  ],
+  "blockers": [],
+  "conditionalRequirementsBeforeFirstPaidClient": [
+    "Run fresh authenticated production smoke against https://halalzi-erp.vercel.app and record pass/fail counts only.",
+    "Verify production dashboard and core module visibility with an admin user.",
+    "Confirm Neon backup or point-in-time restore posture.",
+    "Confirm email sender domain limitations are understood before using real-client email flows."
+  ],
+  "acceptedRisks": [
+    "Pagination hardening still needed before broad public launch.",
+    "API rate limiting still needed before broad public launch.",
+    "Broader audit logging coverage still needed for some finance/vendor mutations.",
+    "Production migration baseline is documented but not yet the default long-term deploy posture.",
+    "Final verified sender domain may depend on later domain purchase."
+  ],
+  "pilotOperatingRules": {
+    "maxConcurrentPilotCompanies": 5,
+    "pilotPriceBdtPerMonth": 5000,
+    "customCodeAllowed": false,
+    "supportMode": "Remote, bounded, async-first",
+    "requiresClientChampion": true
+  },
+  "recommendation": "Proceed with first controlled paid pilot only after fresh authenticated production smoke and dashboard visibility checks pass."
+}
