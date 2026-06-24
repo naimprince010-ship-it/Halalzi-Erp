@@ -1,0 +1,62 @@
+{
+  "issue": "HAL-159",
+  "status": "Done",
+  "checkedAt": "2026-06-24T22:20:00+06:00",
+  "productionUrl": "https://halalzi-erp.vercel.app",
+  "method": "Authenticated in-app browser session. No credentials were written to files or printed.",
+  "smokeResult": {
+    "npmSmokeCommand": "not_run",
+    "reason": "SMOKE_ADMIN_PASSWORD was not available in the shell after secret-safe handling. Authenticated browser verification was used instead.",
+    "authenticatedBrowserSession": "PASS"
+  },
+  "permissionVerification": {
+    "endpoint": "/api/auth/me",
+    "status": "PASS",
+    "adminHasPermissions": {
+      "purchases.submit": true,
+      "purchases.approve": true,
+      "purchases.reject": true,
+      "roles.update": true
+    }
+  },
+  "uiRoutesChecked": [
+    {
+      "route": "/dashboard",
+      "status": "PASS"
+    },
+    {
+      "route": "/dashboard/sales",
+      "status": "PASS"
+    },
+    {
+      "route": "/dashboard/procurement",
+      "status": "PASS",
+      "notes": "Procurement page loads. Production tenant currently has 0 vendors and 0 purchase orders, so submit/approve/reject action buttons are not rendered for an existing order."
+    },
+    {
+      "route": "/dashboard/finance",
+      "status": "PASS"
+    },
+    {
+      "route": "/dashboard/products",
+      "status": "PASS"
+    },
+    {
+      "route": "/dashboard/users",
+      "status": "PASS"
+    },
+    {
+      "route": "/dashboard/roles",
+      "status": "PASS",
+      "notes": "Company Admin role shows purchases.submit, purchases.approve, and purchases.reject."
+    }
+  ],
+  "passed": 9,
+  "failed": 0,
+  "blockers": [],
+  "acceptedLimitations": [
+    "Full npm run smoke:prod was not rerun from shell because credentials were not available there after safe secret handling.",
+    "Approval action buttons require at least one relevant purchase order state to render; production currently has no purchase orders."
+  ],
+  "recommendation": "GO for controlled paid-pilot onboarding after rotating the exposed admin password and creating a test purchase order if visual approval-button proof is required."
+}
