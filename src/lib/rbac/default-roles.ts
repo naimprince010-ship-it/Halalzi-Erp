@@ -1,6 +1,6 @@
 import { DEFAULT_PERMISSIONS, type PermissionKey } from "./default-permissions";
 
-type RbacClient = {
+export type RbacClient = {
   permission: {
     upsert(args: {
       where: { key: string };
@@ -141,6 +141,200 @@ const STAFF_PERMISSIONS: PermissionKey[] = [
   "crm.pipeline.read",
 ];
 
+export const ROLE_TEMPLATES: {
+  key: string;
+  name: string;
+  description: string;
+  isSystem: boolean;
+  permissions: PermissionKey[];
+}[] = [
+  {
+    key: "admin",
+    name: "Company Admin",
+    description: "Full control inside the company workspace.",
+    isSystem: true,
+    permissions: ADMIN_PERMISSIONS,
+  },
+  {
+    key: "sales_operator",
+    name: "Sales Operator",
+    description: "Manage sales orders, quotations, and invoices.",
+    isSystem: false,
+    permissions: [
+      "dashboard.read",
+      "profile.read",
+      "profile.update",
+      "products.read",
+      "sales.read",
+      "sales.create",
+      "sales.update",
+      "sales.confirm",
+      "sales.cancel",
+      "sales.quotations.read",
+      "sales.quotations.create",
+      "sales.quotations.update",
+      "sales.quotations.send",
+      "sales.quotations.accept",
+      "sales.quotations.reject",
+      "sales.quotations.expire",
+      "sales.quotations.convert",
+      "sales.invoices.read",
+      "sales.invoices.create",
+      "sales.invoices.update",
+      "sales.invoices.issue",
+      "sales.invoices.cancel",
+    ],
+  },
+  {
+    key: "procurement_clerk",
+    name: "Procurement Clerk",
+    description: "Create and receive purchase orders. Cannot approve.",
+    isSystem: false,
+    permissions: [
+      "dashboard.read",
+      "profile.read",
+      "profile.update",
+      "products.read",
+      "vendors.read",
+      "vendors.create",
+      "vendors.update",
+      "purchases.read",
+      "purchases.create",
+      "purchases.update",
+      "purchases.submit",
+      "purchases.receive",
+      "purchases.cancel",
+    ],
+  },
+  {
+    key: "procurement_approver",
+    name: "Procurement Approver",
+    description: "Review and approve or reject purchase orders.",
+    isSystem: false,
+    permissions: [
+      "dashboard.read",
+      "profile.read",
+      "profile.update",
+      "products.read",
+      "vendors.read",
+      "purchases.read",
+      "purchases.approve",
+      "purchases.reject",
+    ],
+  },
+  {
+    key: "warehouse_receiver",
+    name: "Warehouse Receiver",
+    description: "Manage inventory adjustments and order receiving/confirmation.",
+    isSystem: false,
+    permissions: [
+      "dashboard.read",
+      "profile.read",
+      "profile.update",
+      "products.read",
+      "inventory.adjust",
+      "purchases.read",
+      "purchases.receive",
+      "sales.read",
+      "sales.confirm",
+    ],
+  },
+  {
+    key: "finance_operator",
+    name: "Finance Operator",
+    description: "Manage finance accounts, journals, payments, and periods.",
+    isSystem: false,
+    permissions: [
+      "dashboard.read",
+      "profile.read",
+      "profile.update",
+      "finance.read",
+      "finance.accounts.create",
+      "finance.accounts.update",
+      "finance.journals.create",
+      "finance.journals.update",
+      "finance.journals.post",
+      "finance.journals.cancel",
+      "finance.journals.reverse",
+      "finance.receivables.update",
+      "finance.payables.update",
+      "finance.periods.read",
+      "finance.periods.manage",
+      "finance.payments.read",
+      "finance.payments.create",
+      "finance.expenses.read",
+      "finance.expenses.create",
+      "finance.expenses.reverse",
+      "finance.cashbank.read",
+      "finance.cashbank.manage",
+      "finance.reports.read",
+    ],
+  },
+  {
+    key: "crm_operator",
+    name: "CRM Operator",
+    description: "Manage leads, customers, deals, and sales tasks.",
+    isSystem: false,
+    permissions: [
+      "dashboard.read",
+      "profile.read",
+      "profile.update",
+      "crm.read",
+      "crm.create",
+      "crm.update",
+      "crm.convert",
+      "crm.archive",
+      "crm.deals.read",
+      "crm.deals.create",
+      "crm.deals.update",
+      "crm.deals.close",
+      "crm.tasks.read",
+      "crm.tasks.create",
+      "crm.tasks.update",
+      "crm.pipeline.read",
+      "crm.pipeline.update",
+    ],
+  },
+  {
+    key: "auditor",
+    name: "Auditor / Read-only",
+    description: "Read-only access across all operations and audit logs.",
+    isSystem: false,
+    permissions: [
+      "dashboard.read",
+      "profile.read",
+      "profile.update",
+      "company.read",
+      "users.read",
+      "roles.read",
+      "products.read",
+      "sales.read",
+      "sales.quotations.read",
+      "sales.invoices.read",
+      "vendors.read",
+      "purchases.read",
+      "finance.read",
+      "finance.periods.read",
+      "finance.payments.read",
+      "finance.expenses.read",
+      "finance.cashbank.read",
+      "finance.reports.read",
+      "crm.read",
+      "crm.deals.read",
+      "crm.tasks.read",
+      "crm.pipeline.read",
+      "audit.read",
+    ],
+  },
+  {
+    key: "staff",
+    name: "Staff",
+    description: "Basic dashboard and profile access.",
+    isSystem: true,
+    permissions: STAFF_PERMISSIONS,
+  },
+];
+
 export async function ensurePermissions(client: RbacClient) {
   for (const permission of DEFAULT_PERMISSIONS) {
     await client.permission.upsert({
@@ -154,60 +348,48 @@ export async function ensurePermissions(client: RbacClient) {
 export async function createDefaultCompanyRoles(client: RbacClient, companyId: string) {
   await ensurePermissions(client);
 
-  const adminRole = await client.role.upsert({
-    where: { companyId_key: { companyId, key: "admin" } },
-    update: {
-      name: "Company Admin",
-      description: "Full control inside the company workspace.",
-      isSystem: true,
-    },
-    create: {
-      companyId,
-      name: "Company Admin",
-      key: "admin",
-      description: "Full control inside the company workspace.",
-      isSystem: true,
-    },
-  });
-
-  const staffRole = await client.role.upsert({
-    where: { companyId_key: { companyId, key: "staff" } },
-    update: {
-      name: "Staff",
-      description: "Basic dashboard and profile access.",
-      isSystem: true,
-    },
-    create: {
-      companyId,
-      name: "Staff",
-      key: "staff",
-      description: "Basic dashboard and profile access.",
-      isSystem: true,
-    },
-  });
+  const roles = await Promise.all(
+    ROLE_TEMPLATES.map((template) =>
+      client.role.upsert({
+        where: { companyId_key: { companyId, key: template.key } },
+        update: {
+          name: template.name,
+          description: template.description,
+          isSystem: template.isSystem,
+        },
+        create: {
+          companyId,
+          name: template.name,
+          key: template.key,
+          description: template.description,
+          isSystem: template.isSystem,
+        },
+      })
+    )
+  );
 
   const permissions = await client.permission.findMany({
-    where: { key: { in: [...ADMIN_PERMISSIONS] } },
+    where: { key: { in: [...new Set(ROLE_TEMPLATES.flatMap((t) => t.permissions))] } },
     select: { id: true, key: true },
   });
 
-  const permissionByKey = new Map(permissions.map((permission) => [permission.key, permission.id]));
+  const permissionByKey = new Map(permissions.map((p) => [p.key, p.id]));
 
-  await client.rolePermission.createMany({
-    data: ADMIN_PERMISSIONS.map((key) => ({
-      roleId: adminRole.id,
-      permissionId: permissionByKey.get(key)!,
-    })),
-    skipDuplicates: true,
-  });
+  for (let i = 0; i < ROLE_TEMPLATES.length; i++) {
+    const template = ROLE_TEMPLATES[i];
+    const roleId = roles[i].id;
 
-  await client.rolePermission.createMany({
-    data: STAFF_PERMISSIONS.map((key) => ({
-      roleId: staffRole.id,
-      permissionId: permissionByKey.get(key)!,
-    })),
-    skipDuplicates: true,
-  });
+    await client.rolePermission.createMany({
+      data: template.permissions.map((key) => ({
+        roleId,
+        permissionId: permissionByKey.get(key)!,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  const adminRole = roles.find((r) => r.key === "admin")!;
+  const staffRole = roles.find((r) => r.key === "staff")!;
 
   return { adminRole, staffRole };
 }
