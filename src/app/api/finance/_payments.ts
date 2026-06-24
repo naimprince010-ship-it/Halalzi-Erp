@@ -12,6 +12,7 @@ const moneySchema = z
 
 export const createPaymentSchema = z.object({
   amount: moneySchema,
+  accountId: z.string().trim().min(1).optional(),
   paymentDate: z.string().trim().datetime().optional(),
   method: z.enum(paymentMethods).optional(),
   reference: z.string().trim().max(120).optional(),
@@ -21,6 +22,8 @@ export const createPaymentSchema = z.object({
 export const safeReceivablePaymentSelect = {
   id: true,
   receivableId: true,
+  accountId: true,
+  journalEntryId: true,
   amount: true,
   paymentDate: true,
   method: true,
@@ -35,11 +38,29 @@ export const safeReceivablePaymentSelect = {
       email: true,
     },
   },
+  account: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      kind: true,
+      type: true,
+    },
+  },
+  journalEntry: {
+    select: {
+      id: true,
+      entryNumber: true,
+      status: true,
+    },
+  },
 } as const;
 
 export const safePayablePaymentSelect = {
   id: true,
   payableId: true,
+  accountId: true,
+  journalEntryId: true,
   amount: true,
   paymentDate: true,
   method: true,
@@ -52,6 +73,22 @@ export const safePayablePaymentSelect = {
       id: true,
       name: true,
       email: true,
+    },
+  },
+  account: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      kind: true,
+      type: true,
+    },
+  },
+  journalEntry: {
+    select: {
+      id: true,
+      entryNumber: true,
+      status: true,
     },
   },
 } as const;

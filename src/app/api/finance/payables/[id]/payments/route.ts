@@ -81,6 +81,26 @@ export async function POST(request: Request, context: RouteContext) {
         throw new AppError("VALIDATION_ERROR", "This payable is already fully paid.", 400);
       }
 
+      if (input.accountId) {
+        const paymentAccount = await tx.financeAccount.findFirst({
+          where: {
+            id: input.accountId,
+            companyId: scope.companyId,
+            status: "active",
+            kind: { in: ["cash", "bank", "mobile_money"] },
+          },
+          select: { id: true },
+        });
+
+        if (!paymentAccount) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            "Please select an active cash or bank account for this payment.",
+            400,
+          );
+        }
+      }
+
       const paymentDate = input.paymentDate ? new Date(input.paymentDate) : new Date();
       await assertPeriodOpenForDate(tx, scope.companyId, paymentDate);
 
@@ -91,6 +111,7 @@ export async function POST(request: Request, context: RouteContext) {
         data: {
           companyId: scope.companyId,
           payableId: payable.id,
+          accountId: input.accountId,
           amount: input.amount,
           paymentDate,
           method: input.method ?? "bank_transfer",
@@ -122,12 +143,33 @@ export async function POST(request: Request, context: RouteContext) {
       summary: `Payable payment recorded for ${result.payable.vendorNameSnapshot}`,
       metadata: {
         payableId: result.payable.id,
+        accountId: result.payment.accountId,
+        journalEntryId: result.payment.journalEntryId,
         amount: Number(result.payment.amount),
         method: result.payment.method,
         paymentDate: result.payment.paymentDate.toISOString(),
         payableStatus: result.payable.status,
       },
     });
+
+    if (result.payment.accountId) {
+      await recordAuditLog({
+        companyId: scope.companyId,
+        userId: currentUser.user.id,
+        action: "finance.payable_payment.account_linked",
+        entityType: "payable_payment",
+        entityId: result.payment.id,
+        summary: `Payable payment linked to account ${result.payment.account?.code ?? result.payment.accountId}`,
+        metadata: {
+          payableId: result.payable.id,
+          paymentId: result.payment.id,
+          accountId: result.payment.accountId,
+          journalEntryId: result.payment.journalEntryId,
+          amount: Number(result.payment.amount),
+          method: result.payment.method,
+        },
+      });
+    }
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

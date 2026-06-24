@@ -115,6 +115,36 @@ export const DEFAULT_PERMISSIONS = [
     description: "Create receivable and payable payments",
   },
   {
+    key: "finance.expenses.read",
+    module: "finance",
+    action: "expenses.read",
+    description: "View expenses",
+  },
+  {
+    key: "finance.expenses.create",
+    module: "finance",
+    action: "expenses.create",
+    description: "Create posted expenses",
+  },
+  {
+    key: "finance.expenses.reverse",
+    module: "finance",
+    action: "expenses.reverse",
+    description: "Reverse posted expenses",
+  },
+  {
+    key: "finance.cashbank.read",
+    module: "finance",
+    action: "cashbank.read",
+    description: "View cash and bank balances",
+  },
+  {
+    key: "finance.cashbank.manage",
+    module: "finance",
+    action: "cashbank.manage",
+    description: "Manage cash, bank, and mobile money account kinds",
+  },
+  {
     key: "finance.reports.read",
     module: "finance",
     action: "reports.read",

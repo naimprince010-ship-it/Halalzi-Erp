@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth-client";
+import { FinanceCashBankExpensePanel } from "@/components/finance/FinanceCashBankExpensePanel";
 import { FinanceInvoiceSummaryPanel } from "@/components/finance/FinanceInvoiceSummaryPanel";
 
 type AccountType = "asset" | "liability" | "equity" | "income" | "expense";
+type AccountKind = "general" | "cash" | "bank" | "mobile_money";
 type AccountStatus = "active" | "inactive";
 type JournalStatus = "draft" | "posted" | "cancelled";
 type SettlementStatus = "open" | "partial" | "paid" | "cancelled";
@@ -16,6 +18,7 @@ type FinanceAccount = {
   name: string;
   code: string;
   type: AccountType;
+  kind: AccountKind;
   status: AccountStatus;
   openingBalance: number | string;
   currentBalance: number | string;
@@ -101,6 +104,7 @@ const emptyAccountForm = {
   name: "",
   code: "",
   type: "asset" as AccountType,
+  kind: "general" as AccountKind,
   status: "active" as AccountStatus,
   openingBalance: "0",
 };
@@ -147,6 +151,7 @@ function accountPayload(form: typeof emptyAccountForm) {
     name: form.name.trim(),
     code: form.code.trim(),
     type: form.type,
+    kind: form.kind,
     status: form.status,
     openingBalance: Number(form.openingBalance || 0),
   };
@@ -187,6 +192,7 @@ export default function FinanceDashboardPage() {
 
   const canReadFinance = currentUser?.permissions.includes("finance.read") ?? false;
   const canCreateAccounts = currentUser?.permissions.includes("finance.accounts.create") ?? false;
+  const canManageCashBank = currentUser?.permissions.includes("finance.cashbank.manage") ?? false;
   const canCreateJournals = currentUser?.permissions.includes("finance.journals.create") ?? false;
   const canPostJournals = currentUser?.permissions.includes("finance.journals.post") ?? false;
   const canCancelJournals = currentUser?.permissions.includes("finance.journals.cancel") ?? false;
@@ -514,6 +520,12 @@ export default function FinanceDashboardPage() {
 
             <FinanceInvoiceSummaryPanel />
 
+            <FinanceCashBankExpensePanel
+              permissions={currentUser.permissions}
+              onError={setError}
+              onSuccess={setSuccess}
+            />
+
             <FinanceAdvancedPanel currentUser={currentUser} onError={setError} onSuccess={setSuccess} />
 
             <section className="procurement-section">
@@ -545,6 +557,17 @@ export default function FinanceDashboardPage() {
                       <option value="expense">expense</option>
                     </select>
                   </label>
+                  {canManageCashBank ? (
+                    <label className="field">
+                      <span>Kind</span>
+                      <select className="role-select" value={accountForm.kind} onChange={(event) => setAccountForm({ ...accountForm, kind: event.target.value as AccountKind })}>
+                        <option value="general">general</option>
+                        <option value="cash">cash</option>
+                        <option value="bank">bank</option>
+                        <option value="mobile_money">mobile money</option>
+                      </select>
+                    </label>
+                  ) : null}
                   <label className="field">
                     <span>Opening balance</span>
                     <input type="number" min="0" step="0.01" value={accountForm.openingBalance} onChange={(event) => setAccountForm({ ...accountForm, openingBalance: event.target.value })} />
@@ -569,6 +592,7 @@ export default function FinanceDashboardPage() {
                     <div><span>Code</span><strong>{account.code}</strong></div>
                     <div><span>Name</span><strong>{account.name}</strong></div>
                     <div><span>Type</span><strong>{account.type}</strong></div>
+                    <div><span>Kind</span><strong>{account.kind}</strong></div>
                     <div><span>Status</span><strong>{account.status}</strong></div>
                     <div><span>Opening</span><strong>{money(account.openingBalance)}</strong></div>
                     <div><span>Current</span><strong>{money(account.currentBalance)}</strong></div>
@@ -798,6 +822,18 @@ type AdvancedFinancePayment = {
   paymentDate: string;
   method: string;
   reference: string | null;
+  accountId?: string | null;
+  journalEntryId?: string | null;
+  account?: { code: string; name: string } | null;
+  journalEntry?: { entryNumber: string; status: JournalStatus } | null;
+};
+
+type AdvancedPaymentAccount = {
+  id: string;
+  code: string;
+  name: string;
+  kind: AccountKind;
+  status: AccountStatus;
 };
 
 type AdvancedTrialBalanceReport = {
@@ -834,8 +870,10 @@ function FinanceAdvancedPanel({
   const [receivables, setReceivables] = useState<Receivable[]>([]);
   const [payables, setPayables] = useState<Payable[]>([]);
   const [journals, setJournals] = useState<JournalEntry[]>([]);
+  const [paymentAccounts, setPaymentAccounts] = useState<AdvancedPaymentAccount[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<Record<string, AdvancedFinancePayment[]>>({});
   const [paymentDrafts, setPaymentDrafts] = useState<Record<string, string>>({});
+  const [paymentAccountDrafts, setPaymentAccountDrafts] = useState<Record<string, string>>({});
   const [periodForm, setPeriodForm] = useState({ periodKey: "", startDate: "", endDate: "" });
   const [trialBalance, setTrialBalance] = useState<AdvancedTrialBalanceReport | null>(null);
   const [arAging, setArAging] = useState<AdvancedAgingReport | null>(null);
@@ -864,6 +902,7 @@ function FinanceAdvancedPanel({
       if (canReadPayments || canCreatePayments) {
         tasks.push(fetch("/api/finance/receivables", { cache: "no-store" }).then((response) => parse<{ receivables?: Receivable[] }>(response, "Could not load receivables.")).then((payload) => setReceivables(payload.receivables ?? [])));
         tasks.push(fetch("/api/finance/payables", { cache: "no-store" }).then((response) => parse<{ payables?: Payable[] }>(response, "Could not load payables.")).then((payload) => setPayables(payload.payables ?? [])));
+        tasks.push(fetch("/api/finance/accounts", { cache: "no-store" }).then((response) => parse<{ accounts?: AdvancedPaymentAccount[] }>(response, "Could not load payment accounts.")).then((payload) => setPaymentAccounts((payload.accounts ?? []).filter((account) => account.status === "active" && (account.kind === "cash" || account.kind === "bank" || account.kind === "mobile_money")))));
       }
       if (canReverseJournals) tasks.push(fetch("/api/finance/journal-entries", { cache: "no-store" }).then((response) => parse<{ journalEntries?: JournalEntry[] }>(response, "Could not load journal entries.")).then((payload) => setJournals(payload.journalEntries ?? [])));
       if (canReadReports) {
@@ -950,10 +989,11 @@ function FinanceAdvancedPanel({
       const response = await fetch(`/api/finance/${endpoint}/${id}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Number(paymentDrafts[key] || 0), method: "bank_transfer" }),
+        body: JSON.stringify({ amount: Number(paymentDrafts[key] || 0), accountId: paymentAccountDrafts[key] || undefined, method: "bank_transfer" }),
       });
       await parse(response, `Could not record ${kind} payment.`);
       setPaymentDrafts((current) => ({ ...current, [key]: "" }));
+      setPaymentAccountDrafts((current) => ({ ...current, [key]: "" }));
       onSuccess(`${kind === "receivable" ? "Receivable" : "Payable"} payment recorded.`);
       await Promise.all([loadAdvancedFinance(), loadPayments(kind, id)]);
     } catch (caught) {
@@ -990,17 +1030,17 @@ function FinanceAdvancedPanel({
     <section className="procurement-section">
       <div className="section-heading-row"><div><p className="eyebrow">Finance controls</p><h2>Periods, payments, reversals, and reports</h2></div><button className="secondary-button" type="button" onClick={loadAdvancedFinance} disabled={busy === "advanced-load"}>{busy === "advanced-load" ? "Refreshing..." : "Refresh controls"}</button></div>
       {canReadPeriods ? <div className="finance-control-panel"><div className="section-heading-row"><div><p className="eyebrow">Periods</p><h2>Accounting periods</h2></div><span>{periods.length} periods</span></div>{canManagePeriods ? <form className="procurement-form" onSubmit={createPeriod}><label className="field"><span>Period key</span><input value={periodForm.periodKey} onChange={(event) => setPeriodForm({ ...periodForm, periodKey: event.target.value })} placeholder="2026-01" required /></label><label className="field"><span>Start date</span><input type="date" value={periodForm.startDate} onChange={(event) => setPeriodForm({ ...periodForm, startDate: event.target.value })} required /></label><label className="field"><span>End date</span><input type="date" value={periodForm.endDate} onChange={(event) => setPeriodForm({ ...periodForm, endDate: event.target.value })} required /></label><div className="procurement-actions"><button className="primary-button" type="submit" disabled={busy === "period-create"}>{busy === "period-create" ? "Creating..." : "Create period"}</button></div></form> : null}<div className="users-list">{loaded && periods.length === 0 ? <article className="user-row user-row-empty"><strong>No periods found.</strong></article> : null}{periods.map((period) => <article className="finance-period-row" key={period.id}><div><span>Key</span><strong>{period.periodKey}</strong></div><div><span>Start</span><strong>{dateOnly(period.startDate)}</strong></div><div><span>End</span><strong>{dateOnly(period.endDate)}</strong></div><div><span>Status</span><strong>{period.status}</strong></div><div><span>Closed</span><strong>{dateTime(period.closedAt)}</strong></div><div><span>Closed by</span><strong>{period.closedByUser?.name ?? "-"}</strong></div>{canManagePeriods ? <div className="procurement-row-actions">{period.status === "open" ? <button className="secondary-button" type="button" onClick={() => periodAction(period, "close")} disabled={busy === `close-${period.id}`}>Close</button> : <button className="secondary-button" type="button" onClick={() => periodAction(period, "reopen")} disabled={busy === `reopen-${period.id}`}>Reopen</button>}</div> : null}</article>)}</div></div> : null}
-      {(canReadPayments || canCreatePayments) ? <div className="finance-control-grid"><AdvancedSettlementPanel busy={busy} canCreatePayments={canCreatePayments} canReadPayments={canReadPayments} items={receivables} kind="receivable" paymentDrafts={paymentDrafts} paymentHistory={paymentHistory} onCreatePayment={createPayment} onLoadPayments={loadPayments} onPaymentDraftChange={(key, value) => setPaymentDrafts((current) => ({ ...current, [key]: value }))} /><AdvancedSettlementPanel busy={busy} canCreatePayments={canCreatePayments} canReadPayments={canReadPayments} items={payables} kind="payable" paymentDrafts={paymentDrafts} paymentHistory={paymentHistory} onCreatePayment={createPayment} onLoadPayments={loadPayments} onPaymentDraftChange={(key, value) => setPaymentDrafts((current) => ({ ...current, [key]: value }))} /></div> : null}
+      {(canReadPayments || canCreatePayments) ? <div className="finance-control-grid"><AdvancedSettlementPanel busy={busy} canCreatePayments={canCreatePayments} canReadPayments={canReadPayments} items={receivables} kind="receivable" paymentAccounts={paymentAccounts} paymentDrafts={paymentDrafts} paymentAccountDrafts={paymentAccountDrafts} paymentHistory={paymentHistory} onCreatePayment={createPayment} onLoadPayments={loadPayments} onPaymentDraftChange={(key, value) => setPaymentDrafts((current) => ({ ...current, [key]: value }))} onPaymentAccountChange={(key, value) => setPaymentAccountDrafts((current) => ({ ...current, [key]: value }))} /><AdvancedSettlementPanel busy={busy} canCreatePayments={canCreatePayments} canReadPayments={canReadPayments} items={payables} kind="payable" paymentAccounts={paymentAccounts} paymentDrafts={paymentDrafts} paymentAccountDrafts={paymentAccountDrafts} paymentHistory={paymentHistory} onCreatePayment={createPayment} onLoadPayments={loadPayments} onPaymentDraftChange={(key, value) => setPaymentDrafts((current) => ({ ...current, [key]: value }))} onPaymentAccountChange={(key, value) => setPaymentAccountDrafts((current) => ({ ...current, [key]: value }))} /></div> : null}
       {canReverseJournals ? <div className="finance-control-panel"><div className="section-heading-row"><div><p className="eyebrow">Journal reversal</p><h2>Posted entries</h2></div><span>{journals.filter((entry) => entry.status === "posted").length} posted</span></div><div className="users-list">{journals.filter((entry) => entry.status === "posted").slice(0, 8).map((entry) => <article className="finance-journal-row" key={entry.id}><div><span>Entry</span><strong>{entry.entryNumber}</strong></div><div><span>Date</span><strong>{dateTime(entry.entryDate)}</strong></div><div><span>Debit</span><strong>{money(entry.totalDebit)}</strong></div><div><span>Credit</span><strong>{money(entry.totalCredit)}</strong></div><div className="procurement-row-actions"><button className="secondary-button" type="button" onClick={() => reverseJournal(entry)} disabled={busy === `reverse-${entry.id}`}>Reverse</button></div></article>)}</div></div> : null}
       {canReadReports ? <div className="finance-control-panel"><div className="section-heading-row"><div><p className="eyebrow">Reports</p><h2>Trial balance and aging</h2></div><span>{trialBalance?.totals.isBalanced ? "Balanced" : "Review"}</span></div><div className="finance-report-grid"><article className="stat-tile"><span>Trial debit</span><strong>{money(trialBalance?.totals.debit)}</strong></article><article className="stat-tile"><span>Trial credit</span><strong>{money(trialBalance?.totals.credit)}</strong></article><article className="stat-tile"><span>AR outstanding</span><strong>{money(arAging?.totals.totalOutstanding)}</strong></article><article className="stat-tile"><span>AP outstanding</span><strong>{money(apAging?.totals.totalOutstanding)}</strong></article></div><div className="finance-report-grid"><FinanceReportList title="Trial balance" rows={(trialBalance?.rows ?? []).slice(0, 8).map((row) => ({ label: `${row.code} - ${row.name}`, value: `${money(row.debit)} / ${money(row.credit)}`, meta: row.type }))} /><FinanceReportList title="AR aging" rows={(arAging?.items ?? []).slice(0, 8).map((item) => ({ label: item.customerNameSnapshot ?? "Customer", value: money(item.outstanding), meta: item.bucket }))} /><FinanceReportList title="AP aging" rows={(apAging?.items ?? []).slice(0, 8).map((item) => ({ label: item.vendorNameSnapshot ?? "Vendor", value: money(item.outstanding), meta: item.bucket }))} /></div></div> : null}
     </section>
   );
 }
 
-function AdvancedSettlementPanel({ busy, canCreatePayments, canReadPayments, items, kind, paymentDrafts, paymentHistory, onCreatePayment, onLoadPayments, onPaymentDraftChange }: { busy: string | null; canCreatePayments: boolean; canReadPayments: boolean; items: Array<Receivable | Payable>; kind: "receivable" | "payable"; paymentDrafts: Record<string, string>; paymentHistory: Record<string, AdvancedFinancePayment[]>; onCreatePayment: (kind: "receivable" | "payable", id: string) => void; onLoadPayments: (kind: "receivable" | "payable", id: string) => void; onPaymentDraftChange: (key: string, value: string) => void }) {
+function AdvancedSettlementPanel({ busy, canCreatePayments, canReadPayments, items, kind, paymentAccounts, paymentDrafts, paymentAccountDrafts, paymentHistory, onCreatePayment, onLoadPayments, onPaymentDraftChange, onPaymentAccountChange }: { busy: string | null; canCreatePayments: boolean; canReadPayments: boolean; items: Array<Receivable | Payable>; kind: "receivable" | "payable"; paymentAccounts: AdvancedPaymentAccount[]; paymentDrafts: Record<string, string>; paymentAccountDrafts: Record<string, string>; paymentHistory: Record<string, AdvancedFinancePayment[]>; onCreatePayment: (kind: "receivable" | "payable", id: string) => void; onLoadPayments: (kind: "receivable" | "payable", id: string) => void; onPaymentDraftChange: (key: string, value: string) => void; onPaymentAccountChange: (key: string, value: string) => void }) {
   const title = kind === "receivable" ? "Receivable payments" : "Payable payments";
   const openItems = items.filter((item) => item.status !== "paid" && item.status !== "cancelled").slice(0, 6);
-  return <div className="finance-control-panel"><div className="section-heading-row"><div><p className="eyebrow">Payments</p><h2>{title}</h2></div><span>{openItems.length} open</span></div><div className="users-list">{openItems.length === 0 ? <article className="user-row user-row-empty"><strong>No open {kind === "receivable" ? "receivables" : "payables"}.</strong></article> : null}{openItems.map((item) => { const key = `${kind}-${item.id}`; const partyName = kind === "receivable" ? (item as Receivable).customerNameSnapshot : (item as Payable).vendorNameSnapshot; return <article className="finance-payment-row" key={item.id}><div><span>{kind === "receivable" ? "Customer" : "Vendor"}</span><strong>{partyName}</strong></div><div><span>Outstanding</span><strong>{money(Number(item.amount) - Number(item.paidAmount))}</strong></div><div><span>Status</span><strong>{item.status}</strong></div>{canCreatePayments ? <div className="finance-settlement-actions"><input min="0.01" step="0.01" type="number" placeholder="Amount" value={paymentDrafts[key] ?? ""} onChange={(event) => onPaymentDraftChange(key, event.target.value)} /><button className="secondary-button" type="button" disabled={busy === `payment-${key}`} onClick={() => onCreatePayment(kind, item.id)}>Record</button></div> : null}{canReadPayments ? <div className="finance-payment-history"><button className="secondary-button" type="button" disabled={busy === `payments-${kind}-${item.id}`} onClick={() => onLoadPayments(kind, item.id)}>Load history</button>{(paymentHistory[key] ?? []).map((payment) => <span key={payment.id}>{dateOnly(payment.paymentDate)} - {money(payment.amount)} - {payment.method}</span>)}</div> : null}</article>; })}</div></div>;
+  return <div className="finance-control-panel"><div className="section-heading-row"><div><p className="eyebrow">Payments</p><h2>{title}</h2></div><span>{openItems.length} open</span></div><div className="users-list">{openItems.length === 0 ? <article className="user-row user-row-empty"><strong>No open {kind === "receivable" ? "receivables" : "payables"}.</strong></article> : null}{openItems.map((item) => { const key = `${kind}-${item.id}`; const partyName = kind === "receivable" ? (item as Receivable).customerNameSnapshot : (item as Payable).vendorNameSnapshot; return <article className="finance-payment-row" key={item.id}><div><span>{kind === "receivable" ? "Customer" : "Vendor"}</span><strong>{partyName}</strong></div><div><span>Outstanding</span><strong>{money(Number(item.amount) - Number(item.paidAmount))}</strong></div><div><span>Status</span><strong>{item.status}</strong></div>{canCreatePayments ? <div className="finance-settlement-actions"><select className="role-select" value={paymentAccountDrafts[key] ?? ""} onChange={(event) => onPaymentAccountChange(key, event.target.value)}><option value="">Payment account (optional)</option>{paymentAccounts.map((account) => <option key={account.id} value={account.id}>{account.code} - {account.name} ({account.kind})</option>)}</select><input min="0.01" step="0.01" type="number" placeholder="Amount" value={paymentDrafts[key] ?? ""} onChange={(event) => onPaymentDraftChange(key, event.target.value)} /><button className="secondary-button" type="button" disabled={busy === `payment-${key}`} onClick={() => onCreatePayment(kind, item.id)}>Record</button></div> : null}{canReadPayments ? <div className="finance-payment-history"><button className="secondary-button" type="button" disabled={busy === `payments-${kind}-${item.id}`} onClick={() => onLoadPayments(kind, item.id)}>Load history</button>{(paymentHistory[key] ?? []).map((payment) => <span key={payment.id}>{dateOnly(payment.paymentDate)} - {money(payment.amount)} - {payment.method}{payment.account ? ` - ${payment.account.code}` : ""}{payment.journalEntry ? ` - JE ${payment.journalEntry.entryNumber}` : ""}</span>)}</div> : null}</article>; })}</div></div>;
 }
 
 function FinanceReportList({ title, rows }: { title: string; rows: Array<{ label: string; value: string; meta: string }> }) {

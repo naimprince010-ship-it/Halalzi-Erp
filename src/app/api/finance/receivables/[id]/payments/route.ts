@@ -81,6 +81,26 @@ export async function POST(request: Request, context: RouteContext) {
         throw new AppError("VALIDATION_ERROR", "This receivable is already fully paid.", 400);
       }
 
+      if (input.accountId) {
+        const paymentAccount = await tx.financeAccount.findFirst({
+          where: {
+            id: input.accountId,
+            companyId: scope.companyId,
+            status: "active",
+            kind: { in: ["cash", "bank", "mobile_money"] },
+          },
+          select: { id: true },
+        });
+
+        if (!paymentAccount) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            "Please select an active cash or bank account for this payment.",
+            400,
+          );
+        }
+      }
+
       const paymentDate = input.paymentDate ? new Date(input.paymentDate) : new Date();
       await assertPeriodOpenForDate(tx, scope.companyId, paymentDate);
 
@@ -91,6 +111,7 @@ export async function POST(request: Request, context: RouteContext) {
         data: {
           companyId: scope.companyId,
           receivableId: receivable.id,
+          accountId: input.accountId,
           amount: input.amount,
           paymentDate,
           method: input.method ?? "bank_transfer",
@@ -122,12 +143,33 @@ export async function POST(request: Request, context: RouteContext) {
       summary: `Receivable payment recorded for ${result.receivable.customerNameSnapshot}`,
       metadata: {
         receivableId: result.receivable.id,
+        accountId: result.payment.accountId,
+        journalEntryId: result.payment.journalEntryId,
         amount: Number(result.payment.amount),
         method: result.payment.method,
         paymentDate: result.payment.paymentDate.toISOString(),
         receivableStatus: result.receivable.status,
       },
     });
+
+    if (result.payment.accountId) {
+      await recordAuditLog({
+        companyId: scope.companyId,
+        userId: currentUser.user.id,
+        action: "finance.receivable_payment.account_linked",
+        entityType: "receivable_payment",
+        entityId: result.payment.id,
+        summary: `Receivable payment linked to account ${result.payment.account?.code ?? result.payment.accountId}`,
+        metadata: {
+          receivableId: result.receivable.id,
+          paymentId: result.payment.id,
+          accountId: result.payment.accountId,
+          journalEntryId: result.payment.journalEntryId,
+          amount: Number(result.payment.amount),
+          method: result.payment.method,
+        },
+      });
+    }
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
