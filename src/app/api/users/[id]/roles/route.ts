@@ -4,6 +4,7 @@ import { AppError, errorResponse } from "@/lib/auth/auth-errors";
 import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
+import { recordAuditLog } from "@/lib/audit/audit-log";
 
 const assignRoleSchema = z.object({
   roleId: z.string().min(1, "Role ID is required."),
@@ -98,6 +99,18 @@ export async function PATCH(
     if (!updatedUser) {
       throw new AppError("INTERNAL_SERVER_ERROR", "User not found after update.", 500);
     }
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "user.role.update",
+      entityType: "user",
+      entityId: id,
+      summary: `Updated role for user: ${updatedUser.name} to ${role.key}`,
+      metadata: {
+        roleKey: role.key,
+      },
+    });
 
     return NextResponse.json({
       user: {

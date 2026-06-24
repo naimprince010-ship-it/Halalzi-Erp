@@ -1,0 +1,11 @@
+{
+  "issue": "HAL-157",
+  "status": "Done",
+  "build_status": "Success",
+  "lint_status": "Success",
+  "review_document": "10-releases/HAL-157_PERFORMANCE_SECURITY_REVIEW.md",
+  "fixes_applied": [
+    "Added recordAuditLog to src/app/api/roles/[id]/permissions/route.ts",
+    "Added recordAuditLog to src/app/api/users/[id]/roles/route.ts"
+  ]
+}

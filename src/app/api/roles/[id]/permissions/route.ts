@@ -12,6 +12,8 @@ const updateRolePermissionsSchema = z.object({
 
 const criticalSelfManagementPermissions = ["roles.read", "roles.assign", "roles.update"] as const;
 
+import { recordAuditLog } from "@/lib/audit/audit-log";
+
 const safeRoleSelect = {
   id: true,
   name: true,
@@ -134,6 +136,18 @@ export async function PATCH(
         },
         select: safeRoleSelect,
       });
+    });
+
+    await recordAuditLog({
+      companyId: scope.companyId,
+      userId: currentUser.user.id,
+      action: "role.permissions.update",
+      entityType: "role",
+      entityId: role.id,
+      summary: `Updated permissions for role: ${role.key}`,
+      metadata: {
+        permissionsAdded: permissions.length,
+      },
     });
 
     return NextResponse.json({ role: toSafeRole(updatedRole) });
