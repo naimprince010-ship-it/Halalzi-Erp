@@ -1,0 +1,34 @@
+{
+  "issue": "HAL-160",
+  "status": "Done",
+  "generatedAt": "2026-06-24T22:55:00+06:00",
+  "documentPath": "10-releases/HAL-160_FIRST_PILOT_CLIENT_ONBOARDING_PACKAGE.md",
+  "artifactPath": "outputs/HAL-160_first_pilot_client_onboarding_package.json",
+  "decision": "READY_FOR_FIRST_QUALIFIED_PILOT_CLIENT",
+  "packageIncludes": [
+    "Client qualification form",
+    "Data collection template list",
+    "Day 1 kickoff call script",
+    "Day 7 training script",
+    "Day 14 check-in script",
+    "Support policy message",
+    "No custom code agreement note",
+    "Go-live checklist",
+    "Pilot success metrics",
+    "Red flag checklist"
+  ],
+  "pilotLimits": {
+    "maxConcurrentClients": 5,
+    "pilotPriceBdtPerMonth": 5000,
+    "customCodeIncluded": false,
+    "remoteOnly": true,
+    "requiresClientChampion": true
+  },
+  "requiredBeforeFirstClient": [
+    "Rotate exposed production admin password.",
+    "Confirm latest production smoke or authenticated browser check is green.",
+    "Confirm client accepts pilot pricing, support scope, and no-custom-code policy.",
+    "Confirm one named client champion."
+  ],
+  "recommendation": "Use this package to start first client discovery/onboarding conversations without expanding scope."
+}
