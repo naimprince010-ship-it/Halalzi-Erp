@@ -16,6 +16,14 @@ const safePurchaseOrderSelect = {
   discountAmount: true,
   totalAmount: true,
   createdAt: true,
+  submittedAt: true,
+  submittedBy: { select: { name: true, email: true } },
+  approvedAt: true,
+  approvedBy: { select: { name: true, email: true } },
+  rejectedAt: true,
+  rejectedBy: { select: { name: true, email: true } },
+  rejectionReason: true,
+  approvalNote: true,
   orderedAt: true,
   receivedAt: true,
   cancelledAt: true,
@@ -32,6 +40,14 @@ type PurchaseOrderExportRow = {
   discountAmount: unknown;
   totalAmount: unknown;
   createdAt: Date;
+  submittedAt: Date | null;
+  submittedBy: { name: string; email: string } | null;
+  approvedAt: Date | null;
+  approvedBy: { name: string; email: string } | null;
+  rejectedAt: Date | null;
+  rejectedBy: { name: string; email: string } | null;
+  rejectionReason: string | null;
+  approvalNote: string | null;
   orderedAt: Date | null;
   receivedAt: Date | null;
   cancelledAt: Date | null;
@@ -49,6 +65,14 @@ const columns: CsvColumn<PurchaseOrderExportRow>[] = [
   { header: "Total", value: (row) => row.totalAmount },
   { header: "Item Count", value: (row) => row._count.items },
   { header: "Created At", value: (row) => row.createdAt },
+  { header: "Submitted At", value: (row) => row.submittedAt },
+  { header: "Submitted By", value: (row) => row.submittedBy?.email ?? row.submittedBy?.name ?? "" },
+  { header: "Approved At", value: (row) => row.approvedAt },
+  { header: "Approved By", value: (row) => row.approvedBy?.email ?? row.approvedBy?.name ?? "" },
+  { header: "Rejected At", value: (row) => row.rejectedAt },
+  { header: "Rejected By", value: (row) => row.rejectedBy?.email ?? row.rejectedBy?.name ?? "" },
+  { header: "Rejection Reason", value: (row) => row.rejectionReason },
+  { header: "Approval Note", value: (row) => row.approvalNote },
   { header: "Ordered At", value: (row) => row.orderedAt },
   { header: "Received At", value: (row) => row.receivedAt },
   { header: "Cancelled At", value: (row) => row.cancelledAt },

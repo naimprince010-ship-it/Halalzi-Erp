@@ -11,6 +11,8 @@ import {
   generatePurchaseOrderNumber,
   isUniqueConstraintError,
   preparePurchaseItems,
+  purchaseOrderStatuses,
+  type PurchaseOrderStatusInput,
   resolvePurchaseVendor,
   safePurchaseOrderSelect,
 } from "./_shared";
@@ -22,14 +24,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     const statusParam = searchParams.get("status")?.trim().toLowerCase();
-    const validStatuses = ["draft", "ordered", "received", "cancelled"] as const;
-    type PurchaseStatus = (typeof validStatuses)[number];
-
-    if (statusParam && !validStatuses.includes(statusParam as PurchaseStatus)) {
+    if (statusParam && !purchaseOrderStatuses.includes(statusParam as PurchaseOrderStatusInput)) {
       return errorResponse(new AppError("VALIDATION_ERROR", "Invalid status filter.", 400));
     }
 
-    const statusFilter = statusParam as PurchaseStatus | undefined;
+    const statusFilter = statusParam as PurchaseOrderStatusInput | undefined;
 
     const purchaseOrders = await prisma.purchaseOrder.findMany({
       where: {

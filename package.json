@@ -25,6 +25,7 @@
     "regression:hal99": "node scripts/hal99-final-regression.mjs",
     "verify:hal137": "node scripts/hal137-quotation-invoice-verification.mjs",
     "verify:hal141": "node scripts/hal141-finance-cash-bank-expense-verification.mjs",
+    "verify:hal143": "node scripts/hal143-purchase-approval-verification.mjs",
     "build:migrate": "prisma generate && node scripts/production-migrate-deploy.mjs && next build",
     "check": "npm run lint && npm run build:ci"
   },

@@ -72,6 +72,7 @@ export async function PATCH(
       throw new AppError("VALIDATION_ERROR", "At least one field is required to update a purchase order.", 400);
     }
 
+    let previousStatus: string | null = null;
     const updated = await prisma.$transaction(async (tx) => {
       const existing = await tx.purchaseOrder.findFirst({
         where: { id, companyId: scope.companyId },
@@ -82,15 +83,25 @@ export async function PATCH(
         throw forbiddenError();
       }
 
-      if (existing.status !== "draft") {
-        throw new AppError("VALIDATION_ERROR", "Only draft purchase orders can be updated.", 400);
+      previousStatus = existing.status;
+
+      const wantsMarkOrdered = parsed.data.status === "ordered";
+      const hasNonStatusUpdates = Object.keys(parsed.data).some((key) => key !== "status");
+
+      if (parsed.data.status !== undefined && !wantsMarkOrdered) {
+        throw new AppError("VALIDATION_ERROR", "Invalid purchase order status transition.", 400);
       }
 
-      if (
-        parsed.data.status !== undefined &&
-        !(existing.status === "draft" && parsed.data.status === "ordered")
-      ) {
-        throw new AppError("VALIDATION_ERROR", "Invalid purchase order status transition.", 400);
+      if (wantsMarkOrdered) {
+        if (hasNonStatusUpdates) {
+          throw new AppError("VALIDATION_ERROR", "Mark ordered cannot be combined with draft edits.", 400);
+        }
+
+        if (existing.status !== "approved") {
+          throw new AppError("VALIDATION_ERROR", "Only approved purchase orders can be marked ordered.", 400);
+        }
+      } else if (existing.status !== "draft") {
+        throw new AppError("VALIDATION_ERROR", "Only draft purchase orders can be updated.", 400);
       }
 
       let vendorData:
@@ -176,6 +187,7 @@ export async function PATCH(
       summary: `Purchase order updated: ${updated.purchaseOrderNumber}`,
       metadata: {
         purchaseOrderNumber: updated.purchaseOrderNumber,
+        previousStatus: previousStatus,
         status: updated.status,
         totalAmount: Number(updated.totalAmount),
       },

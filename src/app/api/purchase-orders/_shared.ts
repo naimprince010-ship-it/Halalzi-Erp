@@ -27,12 +27,32 @@ export const createPurchaseOrderSchema = z.object({
 export const updatePurchaseOrderSchema = z.object({
   vendorId: z.string().trim().min(1, "vendorId is required.").optional(),
   notes: z.string().trim().max(500).nullable().optional(),
-  status: z.enum(["draft", "ordered", "received", "cancelled"]).optional(),
+  status: z.enum(["draft", "pending_approval", "approved", "rejected", "ordered", "received", "cancelled"]).optional(),
   discountAmount: decimalInputSchema
     .refine((value) => value >= 0, "discountAmount must be non-negative.")
     .optional(),
   items: z.array(purchaseOrderItemSchema).min(1, "At least one order item is required.").optional(),
 });
+
+export const approvalNoteSchema = z.object({
+  note: z.string().trim().max(500).optional(),
+});
+
+export const rejectionReasonSchema = z.object({
+  reason: z.string().trim().min(1, "reason is required.").max(500, "reason must be 500 characters or less."),
+});
+
+export const purchaseOrderStatuses = [
+  "draft",
+  "pending_approval",
+  "approved",
+  "rejected",
+  "ordered",
+  "received",
+  "cancelled",
+] as const;
+
+export type PurchaseOrderStatusInput = (typeof purchaseOrderStatuses)[number];
 
 export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>;
 export type UpdatePurchaseOrderInput = z.infer<typeof updatePurchaseOrderSchema>;
@@ -58,6 +78,32 @@ export const safePurchaseOrderSelect = {
   discountAmount: true,
   totalAmount: true,
   notes: true,
+  submittedAt: true,
+  submittedBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  approvedAt: true,
+  approvedBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  rejectedAt: true,
+  rejectedBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  rejectionReason: true,
+  approvalNote: true,
   orderedAt: true,
   receivedAt: true,
   cancelledAt: true,

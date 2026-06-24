@@ -71,6 +71,9 @@ const ADMIN_PERMISSIONS: PermissionKey[] = [
   "purchases.read",
   "purchases.create",
   "purchases.update",
+  "purchases.submit",
+  "purchases.approve",
+  "purchases.reject",
   "purchases.receive",
   "purchases.cancel",
   "finance.read",
@@ -139,15 +142,13 @@ const STAFF_PERMISSIONS: PermissionKey[] = [
 ];
 
 export async function ensurePermissions(client: RbacClient) {
-  await Promise.all(
-    DEFAULT_PERMISSIONS.map((permission) =>
-      client.permission.upsert({
-        where: { key: permission.key },
-        update: {},
-        create: permission,
-      }),
-    ),
-  );
+  for (const permission of DEFAULT_PERMISSIONS) {
+    await client.permission.upsert({
+      where: { key: permission.key },
+      update: {},
+      create: permission,
+    });
+  }
 }
 
 export async function createDefaultCompanyRoles(client: RbacClient, companyId: string) {

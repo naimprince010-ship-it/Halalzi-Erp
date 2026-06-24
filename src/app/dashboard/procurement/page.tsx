@@ -7,7 +7,7 @@ import { getCurrentUser, logout, type CurrentUserResponse } from "@/lib/api/auth
 import { downloadCsvExport } from "@/lib/export/export-client";
 
 type VendorStatus = "active" | "inactive" | "blocked";
-type PurchaseStatus = "draft" | "ordered" | "received" | "cancelled";
+type PurchaseStatus = "draft" | "pending_approval" | "approved" | "rejected" | "ordered" | "received" | "cancelled";
 
 type Vendor = {
   id: string;
@@ -50,6 +50,17 @@ type PurchaseOrder = {
   discountAmount: number | string;
   totalAmount: number | string;
   notes: string | null;
+  submittedAt: string | null;
+  submittedBy: { id: string; name: string; email: string } | null;
+  approvedAt: string | null;
+  approvedBy: { id: string; name: string; email: string } | null;
+  rejectedAt: string | null;
+  rejectedBy: { id: string; name: string; email: string } | null;
+  rejectionReason: string | null;
+  approvalNote: string | null;
+  orderedAt: string | null;
+  receivedAt: string | null;
+  cancelledAt: string | null;
   updatedAt: string;
   items: PurchaseItem[];
 };
@@ -121,6 +132,20 @@ function message(payload: ApiErrorPayload, fallback: string) {
   return payload.error?.message ?? fallback;
 }
 
+function statusLabel(status: PurchaseStatus) {
+  const labels: Record<PurchaseStatus, string> = {
+    draft: "Draft",
+    pending_approval: "Pending approval",
+    approved: "Approved",
+    rejected: "Rejected",
+    ordered: "Ordered",
+    received: "Received",
+    cancelled: "Cancelled",
+  };
+
+  return labels[status];
+}
+
 function purchasePayload(form: PurchaseForm) {
   return {
     vendorId: form.vendorId,
@@ -171,6 +196,9 @@ export default function ProcurementDashboardPage() {
   const canReadPurchases = currentUser?.permissions.includes("purchases.read") ?? false;
   const canCreatePurchases = currentUser?.permissions.includes("purchases.create") ?? false;
   const canUpdatePurchases = currentUser?.permissions.includes("purchases.update") ?? false;
+  const canSubmitPurchases = currentUser?.permissions.includes("purchases.submit") ?? false;
+  const canApprovePurchases = currentUser?.permissions.includes("purchases.approve") ?? false;
+  const canRejectPurchases = currentUser?.permissions.includes("purchases.reject") ?? false;
   const canReceivePurchases = currentUser?.permissions.includes("purchases.receive") ?? false;
   const canCancelPurchases = currentUser?.permissions.includes("purchases.cancel") ?? false;
 
@@ -407,22 +435,49 @@ export default function ProcurementDashboardPage() {
     }
   }
 
-  async function orderAction(order: PurchaseOrder, action: "ordered" | "receive" | "cancel") {
+  async function orderAction(order: PurchaseOrder, action: "submit" | "approve" | "reject" | "ordered" | "receive" | "cancel") {
     clearMessages();
     setBusy(`${action}-${order.id}`);
     try {
+      let requestBody: string | undefined;
+
+      if (action === "ordered") {
+        requestBody = JSON.stringify({ status: "ordered" });
+      } else if (action === "approve") {
+        requestBody = JSON.stringify({});
+      } else if (action === "reject") {
+        const reason = window.prompt("Why is this purchase order rejected?");
+
+        if (!reason?.trim()) {
+          setBusy(null);
+          return;
+        }
+
+        requestBody = JSON.stringify({ reason: reason.trim() });
+      }
+
       const response = await fetch(
         action === "ordered" ? `/api/purchase-orders/${order.id}` : `/api/purchase-orders/${order.id}/${action}`,
         {
           method: action === "ordered" ? "PATCH" : "POST",
-          headers: action === "ordered" ? { "Content-Type": "application/json" } : undefined,
-          body: action === "ordered" ? JSON.stringify({ status: "ordered" }) : undefined,
+          headers: requestBody ? { "Content-Type": "application/json" } : undefined,
+          body: requestBody,
         },
       );
       const payload = (await response.json().catch(() => ({}))) as ApiErrorPayload;
       if (!response.ok) throw new Error(message(payload, "Could not update purchase order."));
       const actionLabel =
-        action === "ordered" ? "marked ordered" : action === "cancel" ? "cancelled" : "received";
+        action === "ordered"
+          ? "marked ordered"
+          : action === "cancel"
+            ? "cancelled"
+            : action === "submit"
+              ? "submitted for approval"
+              : action === "approve"
+                ? "approved"
+                : action === "reject"
+                  ? "rejected"
+                  : "received";
       setSuccess(`Purchase order ${order.purchaseOrderNumber} ${actionLabel}.`);
       await refreshProcurement();
     } catch (caught) {
@@ -689,14 +744,22 @@ export default function ProcurementDashboardPage() {
                   ) : null}
                   {orders.map((order) => {
                     const isDraft = order.status === "draft";
+                    const isPendingApproval = order.status === "pending_approval";
+                    const isApproved = order.status === "approved";
                     const canReceive = order.status === "ordered";
-                    const canCancel = order.status === "draft" || order.status === "ordered";
+                    const canCancel =
+                      order.status === "draft" ||
+                      order.status === "pending_approval" ||
+                      order.status === "approved" ||
+                      order.status === "rejected" ||
+                      order.status === "ordered" ||
+                      order.status === "received";
 
                     return (
                       <article className="purchase-order-row" key={order.id}>
                         <div><span>PO number</span><strong>{order.purchaseOrderNumber}</strong></div>
                         <div><span>Vendor</span><strong>{order.vendorNameSnapshot}</strong></div>
-                        <div><span>Status</span><strong>{order.status}</strong></div>
+                        <div><span>Status</span><strong>{statusLabel(order.status)}</strong></div>
                         <div><span>Subtotal</span><strong>{money(order.subtotal)}</strong></div>
                         <div><span>Discount</span><strong>{money(order.discountAmount)}</strong></div>
                         <div><span>Total</span><strong>{money(order.totalAmount)}</strong></div>
@@ -704,9 +767,19 @@ export default function ProcurementDashboardPage() {
                         <div><span>Updated</span><strong>{dateTime(order.updatedAt)}</strong></div>
                         <div className="procurement-row-actions">
                           {canUpdatePurchases && isDraft ? <button className="secondary-button" type="button" onClick={() => { setPurchaseEditId(order.id); setPurchaseEditForm({ vendorId: order.vendorId, discountAmount: String(order.discountAmount ?? 0), notes: order.notes ?? "", items: order.items.map((item) => ({ productId: item.productId, quantity: String(item.quantity), unitCost: String(item.unitCost) })) }); }}>Edit draft</button> : null}
-                          {canUpdatePurchases && isDraft ? <button className="secondary-button" disabled={busy === `ordered-${order.id}`} type="button" onClick={() => orderAction(order, "ordered")}>Mark ordered</button> : null}
+                          {canSubmitPurchases && isDraft ? <button className="secondary-button" disabled={busy === `submit-${order.id}`} type="button" onClick={() => orderAction(order, "submit")}>Submit</button> : null}
+                          {canApprovePurchases && isPendingApproval ? <button className="secondary-button" disabled={busy === `approve-${order.id}`} type="button" onClick={() => orderAction(order, "approve")}>Approve</button> : null}
+                          {canRejectPurchases && isPendingApproval ? <button className="secondary-button" disabled={busy === `reject-${order.id}`} type="button" onClick={() => orderAction(order, "reject")}>Reject</button> : null}
+                          {canUpdatePurchases && isApproved ? <button className="secondary-button" disabled={busy === `ordered-${order.id}`} type="button" onClick={() => orderAction(order, "ordered")}>Mark ordered</button> : null}
                           {canReceivePurchases && canReceive ? <button className="secondary-button" disabled={busy === `receive-${order.id}`} type="button" onClick={() => orderAction(order, "receive")}>Receive</button> : null}
                           {canCancelPurchases && canCancel ? <button className="secondary-button" disabled={busy === `cancel-${order.id}`} type="button" onClick={() => orderAction(order, "cancel")}>Cancel</button> : null}
+                        </div>
+                        <div className="purchase-items-summary">
+                          {order.submittedAt ? <span>Submitted by {order.submittedBy?.name ?? "unknown"} at {dateTime(order.submittedAt)}</span> : null}
+                          {order.approvedAt ? <span>Approved by {order.approvedBy?.name ?? "unknown"} at {dateTime(order.approvedAt)}</span> : null}
+                          {order.rejectedAt ? <span>Rejected by {order.rejectedBy?.name ?? "unknown"} at {dateTime(order.rejectedAt)}</span> : null}
+                          {order.approvalNote ? <span>Approval note: {order.approvalNote}</span> : null}
+                          {order.rejectionReason ? <span>Rejection reason: {order.rejectionReason}</span> : null}
                         </div>
                         <div className="purchase-items-summary">
                           {order.items.map((item) => <span key={item.id}>{item.productNameSnapshot} x {item.quantity} at {money(item.unitCost)}</span>)}

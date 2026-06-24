@@ -504,6 +504,19 @@ async function main() {
     : null;
   const purchaseOrderId = purchaseOrder?.body?.purchaseOrder?.id;
 
+  const submitPurchaseOrder = purchaseOrderId
+    ? await request(`/api/purchase-orders/${purchaseOrderId}/submit`, {
+        method: "POST",
+        headers: adminAHeaders,
+      })
+    : null;
+  const approvePurchaseOrder = purchaseOrderId
+    ? await request(`/api/purchase-orders/${purchaseOrderId}/approve`, {
+        method: "POST",
+        headers: adminAHeaders,
+        body: JSON.stringify({ note: "HAL141 payable verification approval" }),
+      })
+    : null;
   const markOrdered = purchaseOrderId
     ? await request(`/api/purchase-orders/${purchaseOrderId}`, {
         method: "PATCH",
@@ -534,7 +547,11 @@ async function main() {
 
   add(
     "payable payment with account id records and links account safely",
-    !!markOrdered &&
+    !!submitPurchaseOrder &&
+      statusOf(submitPurchaseOrder) === 200 &&
+      !!approvePurchaseOrder &&
+      statusOf(approvePurchaseOrder) === 200 &&
+      !!markOrdered &&
       statusOf(markOrdered) === 200 &&
       !!receiveOrder &&
       statusOf(receiveOrder) === 200 &&
@@ -542,6 +559,8 @@ async function main() {
       statusOf(payablePayment) === 201 &&
       payablePayment.body?.payment?.accountId === cashAccountId,
     {
+      submitStatus: submitPurchaseOrder ? statusOf(submitPurchaseOrder) : null,
+      approveStatus: approvePurchaseOrder ? statusOf(approvePurchaseOrder) : null,
       markOrderedStatus: markOrdered ? statusOf(markOrdered) : null,
       receiveStatus: receiveOrder ? statusOf(receiveOrder) : null,
       paymentStatus: payablePayment ? statusOf(payablePayment) : null,

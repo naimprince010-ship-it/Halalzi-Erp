@@ -52,8 +52,19 @@ export async function POST(
         throw new AppError("VALIDATION_ERROR", "Purchase order is already cancelled.", 400);
       }
 
-      if (purchaseOrder.status !== "draft" && purchaseOrder.status !== "ordered" && purchaseOrder.status !== "received") {
-        throw new AppError("VALIDATION_ERROR", "Only draft, ordered, or received purchase orders can be cancelled.", 400);
+      if (
+        purchaseOrder.status !== "draft" &&
+        purchaseOrder.status !== "pending_approval" &&
+        purchaseOrder.status !== "approved" &&
+        purchaseOrder.status !== "rejected" &&
+        purchaseOrder.status !== "ordered" &&
+        purchaseOrder.status !== "received"
+      ) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Only draft, pending approval, approved, rejected, ordered, or received purchase orders can be cancelled.",
+          400,
+        );
       }
 
       if (purchaseOrder.status === "received") {

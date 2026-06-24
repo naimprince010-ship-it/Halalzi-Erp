@@ -89,7 +89,7 @@ export async function POST() {
       message: "Verification instructions have been sent if email delivery is configured.",
     };
 
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV !== "production" || process.env.LOCAL_VERIFICATION_TOKENS_ENABLED === "true") {
       body.devVerificationToken = verificationToken;
     }
 

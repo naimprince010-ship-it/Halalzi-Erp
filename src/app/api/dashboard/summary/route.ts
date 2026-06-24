@@ -22,6 +22,8 @@ export async function GET() {
       draftSalesOrders,
       confirmedSalesOrders,
       draftPurchaseOrders,
+      pendingApprovalPurchaseOrders,
+      approvedPurchaseOrders,
       orderedPurchaseOrders,
       openReceivables,
       openPayables,
@@ -46,6 +48,12 @@ export async function GET() {
         : Promise.resolve(null),
       hasPermission(currentUser, "purchases.read")
         ? prisma.purchaseOrder.count({ where: { companyId: scope.companyId, status: "draft" } })
+        : Promise.resolve(null),
+      hasPermission(currentUser, "purchases.read")
+        ? prisma.purchaseOrder.count({ where: { companyId: scope.companyId, status: "pending_approval" } })
+        : Promise.resolve(null),
+      hasPermission(currentUser, "purchases.read")
+        ? prisma.purchaseOrder.count({ where: { companyId: scope.companyId, status: "approved" } })
         : Promise.resolve(null),
       hasPermission(currentUser, "purchases.read")
         ? prisma.purchaseOrder.count({ where: { companyId: scope.companyId, status: "ordered" } })
@@ -78,7 +86,12 @@ export async function GET() {
         procurement:
           draftPurchaseOrders === null
             ? null
-            : { draft: draftPurchaseOrders, ordered: orderedPurchaseOrders ?? 0 },
+            : {
+                draft: draftPurchaseOrders,
+                pendingApproval: pendingApprovalPurchaseOrders ?? 0,
+                approved: approvedPurchaseOrders ?? 0,
+                ordered: orderedPurchaseOrders ?? 0,
+              },
         finance:
           openReceivables === null || openPayables === null
             ? null

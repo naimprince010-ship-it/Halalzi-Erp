@@ -9,7 +9,7 @@ type DashboardSummary = {
   users: number | null;
   products: { active: number; lowStock: number } | null;
   sales: { draft: number; confirmed: number } | null;
-  procurement: { draft: number; ordered: number } | null;
+  procurement: { draft: number; pendingApproval: number; approved: number; ordered: number } | null;
   finance: { activeAccounts: number; openReceivables: number; openPayables: number } | null;
 };
 
@@ -241,7 +241,9 @@ export function DashboardClient() {
             <span>Procurement</span>
             <strong>{summaryLoading ? "Loading..." : `${numberValue(summary?.procurement?.draft)} draft`}</strong>
             <small>
-              {summary?.procurement ? `${summary.procurement.ordered} ordered` : "Requires purchases.read"}
+              {summary?.procurement
+                ? `${summary.procurement.pendingApproval} pending, ${summary.procurement.approved} approved, ${summary.procurement.ordered} ordered`
+                : "Requires purchases.read"}
             </small>
           </article>
           <article className="overview-card overview-card-wide">

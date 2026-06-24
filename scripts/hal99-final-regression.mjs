@@ -449,6 +449,19 @@ async function main() {
     { status: createPurchaseOrder ? statusOf(createPurchaseOrder) : null },
   );
 
+  const submitPurchaseOrder = purchaseOrderId
+    ? await request(`/api/purchase-orders/${purchaseOrderId}/submit`, {
+        method: "POST",
+        headers: adminHeaders,
+      })
+    : null;
+  const approvePurchaseOrder = purchaseOrderId
+    ? await request(`/api/purchase-orders/${purchaseOrderId}/approve`, {
+        method: "POST",
+        headers: adminHeaders,
+        body: JSON.stringify({ note: "HAL99 regression approval" }),
+      })
+    : null;
   const markOrdered = purchaseOrderId
     ? await request(`/api/purchase-orders/${purchaseOrderId}`, {
         method: "PATCH",
@@ -456,7 +469,17 @@ async function main() {
         body: JSON.stringify({ status: "ordered" }),
       })
     : null;
-  add("purchase order ordered transition works", !!markOrdered && statusOf(markOrdered) === 200, {
+  add(
+    "purchase order approval and ordered transition works",
+    !!submitPurchaseOrder &&
+      statusOf(submitPurchaseOrder) === 200 &&
+      !!approvePurchaseOrder &&
+      statusOf(approvePurchaseOrder) === 200 &&
+      !!markOrdered &&
+      statusOf(markOrdered) === 200,
+    {
+    submitStatus: submitPurchaseOrder ? statusOf(submitPurchaseOrder) : null,
+    approveStatus: approvePurchaseOrder ? statusOf(approvePurchaseOrder) : null,
     status: markOrdered ? statusOf(markOrdered) : null,
   });
 
