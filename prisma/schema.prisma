@@ -98,6 +98,7 @@ enum JournalSourceType {
   manual
   sales_order
   purchase_order
+  pos_sale
 }
 
 enum SettlementStatus {
@@ -117,12 +118,18 @@ enum FinancePaymentMethod {
   bank_transfer
   card
   cheque
+  mobile_money
   other
 }
 
 enum ExpenseStatus {
   posted
   reversed
+}
+
+enum PosSaleStatus {
+  completed
+  cancelled
 }
 
 enum StockLedgerEntryType {
@@ -132,12 +139,15 @@ enum StockLedgerEntryType {
   sales_order_cancel
   purchase_order_receive
   purchase_order_cancel
+  pos_sale_complete
+  pos_sale_cancel
 }
 
 enum StockLedgerSourceType {
   product
   sales_order
   purchase_order
+  pos_sale
 }
 
 enum LeadStage {
@@ -204,32 +214,33 @@ model Company {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  users               User[]
-  roles               Role[]
-  products            Product[]
-  salesQuotations     SalesQuotation[]
-  salesInvoices       SalesInvoice[]
-  salesOrders         SalesOrder[]
-  vendors             Vendor[]
-  purchaseOrders      PurchaseOrder[]
-  financeAccounts     FinanceAccount[]
-  journalEntries      JournalEntry[]
-  receivables         Receivable[]
-  payables            Payable[]
-  financePeriods      FinancePeriod[]
-  expenses            Expense[]
-  receivablePayments  ReceivablePayment[]
-  payablePayments     PayablePayment[]
-  journalReversals    JournalReversal[]
-  stockLedgerEntries  StockLedgerEntry[]
-  auditLogs           AuditLog[]
-  leads               Lead[]
-  customerContacts    CustomerContact[]
-  leadActivities      LeadActivity[]
-  pipelineStages      PipelineStage[]
-  deals               Deal[]
-  dealStageHistory    DealStageHistory[]
-  salesTasks          SalesTask[]
+  users              User[]
+  roles              Role[]
+  products           Product[]
+  salesQuotations    SalesQuotation[]
+  salesInvoices      SalesInvoice[]
+  salesOrders        SalesOrder[]
+  posSales           PosSale[]
+  vendors            Vendor[]
+  purchaseOrders     PurchaseOrder[]
+  financeAccounts    FinanceAccount[]
+  journalEntries     JournalEntry[]
+  receivables        Receivable[]
+  payables           Payable[]
+  financePeriods     FinancePeriod[]
+  expenses           Expense[]
+  receivablePayments ReceivablePayment[]
+  payablePayments    PayablePayment[]
+  journalReversals   JournalReversal[]
+  stockLedgerEntries StockLedgerEntry[]
+  auditLogs          AuditLog[]
+  leads              Lead[]
+  customerContacts   CustomerContact[]
+  leadActivities     LeadActivity[]
+  pipelineStages     PipelineStage[]
+  deals              Deal[]
+  dealStageHistory   DealStageHistory[]
+  salesTasks         SalesTask[]
 
   @@index([status])
 }
@@ -251,6 +262,7 @@ model Product {
   salesQuotationItems SalesQuotationItem[]
   salesInvoiceItems   SalesInvoiceItem[]
   salesOrderItems     SalesOrderItem[]
+  posSaleItems        PosSaleItem[]
   purchaseOrderItems  PurchaseOrderItem[]
   stockLedgerEntries  StockLedgerEntry[]
 
@@ -279,7 +291,7 @@ model SalesOrder {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  company    Company           @relation(fields: [companyId], references: [id])
+  company    Company          @relation(fields: [companyId], references: [id])
   quotations SalesQuotation[]
   invoices   SalesInvoice[]
   items      SalesOrderItem[]
@@ -305,6 +317,60 @@ model SalesOrderItem {
   product    Product    @relation(fields: [productId], references: [id])
 
   @@index([salesOrderId])
+  @@index([productId])
+}
+
+model PosSale {
+  id                    String               @id @default(cuid())
+  companyId             String
+  saleNumber            String
+  customerNameSnapshot  String?
+  customerPhoneSnapshot String?
+  status                PosSaleStatus        @default(completed)
+  subtotal              Decimal              @db.Decimal(12, 2)
+  discountAmount        Decimal              @default(0) @db.Decimal(12, 2)
+  totalAmount           Decimal              @db.Decimal(12, 2)
+  paidAmount            Decimal              @db.Decimal(12, 2)
+  changeAmount          Decimal              @default(0) @db.Decimal(12, 2)
+  paymentMethod         FinancePaymentMethod @default(cash)
+  paymentAccountId      String?
+  salesOrderId          String?
+  receivableId          String?
+  journalEntryId        String?
+  cashierUserId         String?
+  completedAt           DateTime             @default(now())
+  cancelledAt           DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id])
+  cashierUser    User?           @relation("PosSaleCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
+  paymentAccount FinanceAccount? @relation("PosSalePaymentAccount", fields: [paymentAccountId], references: [id], onDelete: SetNull)
+  items          PosSaleItem[]
+
+  @@unique([companyId, saleNumber])
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([companyId, completedAt])
+  @@index([cashierUserId])
+  @@index([paymentAccountId])
+}
+
+model PosSaleItem {
+  id                  String   @id @default(cuid())
+  posSaleId           String
+  productId           String
+  productNameSnapshot String
+  productSkuSnapshot  String
+  quantity            Int
+  unitPrice           Decimal  @db.Decimal(12, 2)
+  lineTotal           Decimal  @db.Decimal(12, 2)
+  createdAt           DateTime @default(now())
+
+  posSale PosSale @relation(fields: [posSaleId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([posSaleId])
   @@index([productId])
 }
 
@@ -361,27 +427,27 @@ model SalesQuotationItem {
 }
 
 model SalesInvoice {
-  id                     String        @id @default(cuid())
-  companyId              String
-  salesOrderId           String        @unique
-  quotationId            String?
-  receivableId           String?       @unique
-  invoiceNumber          String
-  customerNameSnapshot   String
-  customerPhoneSnapshot  String?
-  customerEmailSnapshot  String?
+  id                      String        @id @default(cuid())
+  companyId               String
+  salesOrderId            String        @unique
+  quotationId             String?
+  receivableId            String?       @unique
+  invoiceNumber           String
+  customerNameSnapshot    String
+  customerPhoneSnapshot   String?
+  customerEmailSnapshot   String?
   customerAddressSnapshot String?
-  status                 InvoiceStatus @default(draft)
-  invoiceDate            DateTime      @default(now())
-  dueDate                DateTime?
-  subtotal               Decimal       @db.Decimal(12, 2)
-  discountAmount         Decimal       @default(0) @db.Decimal(12, 2)
-  totalAmount            Decimal       @db.Decimal(12, 2)
-  notes                  String?
-  issuedAt               DateTime?
-  cancelledAt            DateTime?
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
+  status                  InvoiceStatus @default(draft)
+  invoiceDate             DateTime      @default(now())
+  dueDate                 DateTime?
+  subtotal                Decimal       @db.Decimal(12, 2)
+  discountAmount          Decimal       @default(0) @db.Decimal(12, 2)
+  totalAmount             Decimal       @db.Decimal(12, 2)
+  notes                   String?
+  issuedAt                DateTime?
+  cancelledAt             DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
 
   company    Company            @relation(fields: [companyId], references: [id])
   salesOrder SalesOrder         @relation(fields: [salesOrderId], references: [id])
@@ -425,26 +491,27 @@ model User {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  company                 Company                  @relation(fields: [companyId], references: [id])
-  userRoles               UserRole[]
-  sessions                Session[]
-  auditLogs               AuditLog[]
-  passwordResetTokens     PasswordResetToken[]
-  emailVerificationTokens EmailVerificationToken[]
-  leadActivities          LeadActivity[]
-  assignedSalesTasks      SalesTask[]              @relation("SalesTaskAssignee")
-  createdSalesTasks       SalesTask[]              @relation("SalesTaskCreator")
-  changedDealStages       DealStageHistory[]       @relation("DealStageChangedBy")
-  closedFinancePeriods    FinancePeriod[]          @relation("FinancePeriodClosedBy")
-  createdExpenses         Expense[]                @relation("ExpenseCreatedBy")
-  reversedExpenses        Expense[]                @relation("ExpenseReversedBy")
-  createdReceivablePayments ReceivablePayment[]    @relation("ReceivablePaymentCreatedBy")
-  createdPayablePayments  PayablePayment[]         @relation("PayablePaymentCreatedBy")
-  createdJournalReversals JournalReversal[]        @relation("JournalReversalCreatedBy")
+  company                   Company                  @relation(fields: [companyId], references: [id])
+  userRoles                 UserRole[]
+  sessions                  Session[]
+  auditLogs                 AuditLog[]
+  passwordResetTokens       PasswordResetToken[]
+  emailVerificationTokens   EmailVerificationToken[]
+  leadActivities            LeadActivity[]
+  assignedSalesTasks        SalesTask[]              @relation("SalesTaskAssignee")
+  createdSalesTasks         SalesTask[]              @relation("SalesTaskCreator")
+  changedDealStages         DealStageHistory[]       @relation("DealStageChangedBy")
+  closedFinancePeriods      FinancePeriod[]          @relation("FinancePeriodClosedBy")
+  createdExpenses           Expense[]                @relation("ExpenseCreatedBy")
+  reversedExpenses          Expense[]                @relation("ExpenseReversedBy")
+  createdReceivablePayments ReceivablePayment[]      @relation("ReceivablePaymentCreatedBy")
+  createdPayablePayments    PayablePayment[]         @relation("PayablePaymentCreatedBy")
+  createdJournalReversals   JournalReversal[]        @relation("JournalReversalCreatedBy")
   createdStockLedgerEntries StockLedgerEntry[]
-  submittedPurchaseOrders PurchaseOrder[]          @relation("PurchaseOrderSubmittedBy")
-  approvedPurchaseOrders  PurchaseOrder[]          @relation("PurchaseOrderApprovedBy")
-  rejectedPurchaseOrders  PurchaseOrder[]          @relation("PurchaseOrderRejectedBy")
+  cashierPosSales           PosSale[]                @relation("PosSaleCashier")
+  submittedPurchaseOrders   PurchaseOrder[]          @relation("PurchaseOrderSubmittedBy")
+  approvedPurchaseOrders    PurchaseOrder[]          @relation("PurchaseOrderApprovedBy")
+  rejectedPurchaseOrders    PurchaseOrder[]          @relation("PurchaseOrderRejectedBy")
 
   @@index([companyId])
   @@index([status])
@@ -612,12 +679,12 @@ model PurchaseOrder {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
-  company Company             @relation(fields: [companyId], references: [id])
-  vendor  Vendor              @relation(fields: [vendorId], references: [id])
-  items   PurchaseOrderItem[]
-  submittedBy User?           @relation("PurchaseOrderSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
-  approvedBy  User?           @relation("PurchaseOrderApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
-  rejectedBy  User?           @relation("PurchaseOrderRejectedBy", fields: [rejectedByUserId], references: [id], onDelete: SetNull)
+  company     Company             @relation(fields: [companyId], references: [id])
+  vendor      Vendor              @relation(fields: [vendorId], references: [id])
+  items       PurchaseOrderItem[]
+  submittedBy User?               @relation("PurchaseOrderSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  approvedBy  User?               @relation("PurchaseOrderApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  rejectedBy  User?               @relation("PurchaseOrderRejectedBy", fields: [rejectedByUserId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, purchaseOrderNumber])
   @@index([companyId])
@@ -661,12 +728,13 @@ model FinanceAccount {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
-  company            Company              @relation(fields: [companyId], references: [id])
-  journalLines       JournalEntryLine[]
-  expensesAsCategory Expense[]            @relation("ExpenseCategoryAccount")
-  expensesAsPaidFrom Expense[]            @relation("ExpensePaidFromAccount")
-  receivablePayments ReceivablePayment[]  @relation("ReceivablePaymentAccount")
-  payablePayments    PayablePayment[]     @relation("PayablePaymentAccount")
+  company                  Company             @relation(fields: [companyId], references: [id])
+  journalLines             JournalEntryLine[]
+  expensesAsCategory       Expense[]           @relation("ExpenseCategoryAccount")
+  expensesAsPaidFrom       Expense[]           @relation("ExpensePaidFromAccount")
+  receivablePayments       ReceivablePayment[] @relation("ReceivablePaymentAccount")
+  payablePayments          PayablePayment[]    @relation("PayablePaymentAccount")
+  posSalesAsPaymentAccount PosSale[]           @relation("PosSalePaymentAccount")
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -691,14 +759,14 @@ model JournalEntry {
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
-  company Company            @relation(fields: [companyId], references: [id])
-  lines   JournalEntryLine[]
+  company                  Company             @relation(fields: [companyId], references: [id])
+  lines                    JournalEntryLine[]
   linkedReceivablePayments ReceivablePayment[] @relation("ReceivablePaymentJournalEntry")
-  linkedPayablePayments   PayablePayment[]     @relation("PayablePaymentJournalEntry")
-  expensePosted           Expense[]            @relation("ExpenseJournalEntry")
-  expenseReversals        Expense[]            @relation("ExpenseReversalJournalEntry")
-  asOriginalReversal JournalReversal? @relation("JournalReversalOriginal")
-  asReversalEntry JournalReversal?    @relation("JournalReversalReversal")
+  linkedPayablePayments    PayablePayment[]    @relation("PayablePaymentJournalEntry")
+  expensePosted            Expense[]           @relation("ExpenseJournalEntry")
+  expenseReversals         Expense[]           @relation("ExpenseReversalJournalEntry")
+  asOriginalReversal       JournalReversal?    @relation("JournalReversalOriginal")
+  asReversalEntry          JournalReversal?    @relation("JournalReversalReversal")
 
   @@unique([companyId, entryNumber])
   @@index([companyId])
@@ -726,7 +794,7 @@ model JournalEntryLine {
 model Receivable {
   id                   String           @id @default(cuid())
   companyId            String
-  salesOrderId         String?  @unique
+  salesOrderId         String?          @unique
   customerNameSnapshot String
   amount               Decimal          @db.Decimal(12, 2)
   paidAmount           Decimal          @default(0) @db.Decimal(12, 2)
@@ -735,7 +803,7 @@ model Receivable {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
-  company      Company       @relation(fields: [companyId], references: [id])
+  company      Company             @relation(fields: [companyId], references: [id])
   salesInvoice SalesInvoice?
   payments     ReceivablePayment[]
 
@@ -747,7 +815,7 @@ model Receivable {
 model Payable {
   id                 String           @id @default(cuid())
   companyId          String
-  purchaseOrderId    String?  @unique
+  purchaseOrderId    String?          @unique
   vendorNameSnapshot String
   amount             Decimal          @db.Decimal(12, 2)
   paidAmount         Decimal          @default(0) @db.Decimal(12, 2)
@@ -756,7 +824,7 @@ model Payable {
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
+  company  Company          @relation(fields: [companyId], references: [id])
   payments PayablePayment[]
 
   @@index([companyId])
@@ -765,7 +833,7 @@ model Payable {
 }
 
 model FinancePeriod {
-  id             String            @id @default(cuid())
+  id             String              @id @default(cuid())
   companyId      String
   periodKey      String
   startDate      DateTime
@@ -773,8 +841,8 @@ model FinancePeriod {
   status         FinancePeriodStatus @default(open)
   closedAt       DateTime?
   closedByUserId String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   company      Company @relation(fields: [companyId], references: [id])
   closedByUser User?   @relation("FinancePeriodClosedBy", fields: [closedByUserId], references: [id], onDelete: SetNull)
@@ -787,32 +855,32 @@ model FinancePeriod {
 }
 
 model Expense {
-  id               String             @id @default(cuid())
-  companyId        String
-  expenseNumber    String
-  expenseDate      DateTime           @default(now())
-  amount           Decimal            @db.Decimal(12, 2)
-  status           ExpenseStatus      @default(posted)
-  method           FinancePaymentMethod @default(bank_transfer)
-  reference        String?
-  note             String?
-  categoryAccountId String
-  paidFromAccountId String
-  journalEntryId   String
+  id                     String               @id @default(cuid())
+  companyId              String
+  expenseNumber          String
+  expenseDate            DateTime             @default(now())
+  amount                 Decimal              @db.Decimal(12, 2)
+  status                 ExpenseStatus        @default(posted)
+  method                 FinancePaymentMethod @default(bank_transfer)
+  reference              String?
+  note                   String?
+  categoryAccountId      String
+  paidFromAccountId      String
+  journalEntryId         String
   reversalJournalEntryId String?
-  reversedAt       DateTime?
-  createdByUserId  String?
-  reversedByUserId String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  reversedAt             DateTime?
+  createdByUserId        String?
+  reversedByUserId       String?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
 
-  company             Company       @relation(fields: [companyId], references: [id])
-  categoryAccount     FinanceAccount @relation("ExpenseCategoryAccount", fields: [categoryAccountId], references: [id])
-  paidFromAccount     FinanceAccount @relation("ExpensePaidFromAccount", fields: [paidFromAccountId], references: [id])
-  journalEntry        JournalEntry   @relation("ExpenseJournalEntry", fields: [journalEntryId], references: [id])
-  reversalJournalEntry JournalEntry? @relation("ExpenseReversalJournalEntry", fields: [reversalJournalEntryId], references: [id])
-  createdByUser       User?          @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  reversedByUser      User?          @relation("ExpenseReversedBy", fields: [reversedByUserId], references: [id], onDelete: SetNull)
+  company              Company        @relation(fields: [companyId], references: [id])
+  categoryAccount      FinanceAccount @relation("ExpenseCategoryAccount", fields: [categoryAccountId], references: [id])
+  paidFromAccount      FinanceAccount @relation("ExpensePaidFromAccount", fields: [paidFromAccountId], references: [id])
+  journalEntry         JournalEntry   @relation("ExpenseJournalEntry", fields: [journalEntryId], references: [id])
+  reversalJournalEntry JournalEntry?  @relation("ExpenseReversalJournalEntry", fields: [reversalJournalEntryId], references: [id])
+  createdByUser        User?          @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  reversedByUser       User?          @relation("ExpenseReversedBy", fields: [reversedByUserId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, expenseNumber])
   @@index([companyId])
@@ -825,24 +893,24 @@ model Expense {
 }
 
 model ReceivablePayment {
-  id              String              @id @default(cuid())
+  id              String               @id @default(cuid())
   companyId       String
   receivableId    String
   accountId       String?
   journalEntryId  String?
-  amount          Decimal             @db.Decimal(12, 2)
-  paymentDate     DateTime            @default(now())
+  amount          Decimal              @db.Decimal(12, 2)
+  paymentDate     DateTime             @default(now())
   method          FinancePaymentMethod @default(bank_transfer)
   reference       String?
   note            String?
   createdByUserId String?
-  createdAt       DateTime            @default(now())
+  createdAt       DateTime             @default(now())
 
-  company       Company    @relation(fields: [companyId], references: [id])
-  receivable    Receivable @relation(fields: [receivableId], references: [id])
+  company       Company         @relation(fields: [companyId], references: [id])
+  receivable    Receivable      @relation(fields: [receivableId], references: [id])
   account       FinanceAccount? @relation("ReceivablePaymentAccount", fields: [accountId], references: [id], onDelete: SetNull)
-  journalEntry  JournalEntry? @relation("ReceivablePaymentJournalEntry", fields: [journalEntryId], references: [id], onDelete: SetNull)
-  createdByUser User?      @relation("ReceivablePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  journalEntry  JournalEntry?   @relation("ReceivablePaymentJournalEntry", fields: [journalEntryId], references: [id], onDelete: SetNull)
+  createdByUser User?           @relation("ReceivablePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([companyId])
   @@index([receivableId])
@@ -854,24 +922,24 @@ model ReceivablePayment {
 }
 
 model PayablePayment {
-  id              String              @id @default(cuid())
+  id              String               @id @default(cuid())
   companyId       String
   payableId       String
   accountId       String?
   journalEntryId  String?
-  amount          Decimal             @db.Decimal(12, 2)
-  paymentDate     DateTime            @default(now())
+  amount          Decimal              @db.Decimal(12, 2)
+  paymentDate     DateTime             @default(now())
   method          FinancePaymentMethod @default(bank_transfer)
   reference       String?
   note            String?
   createdByUserId String?
-  createdAt       DateTime            @default(now())
+  createdAt       DateTime             @default(now())
 
-  company       Company   @relation(fields: [companyId], references: [id])
-  payable       Payable   @relation(fields: [payableId], references: [id])
+  company       Company         @relation(fields: [companyId], references: [id])
+  payable       Payable         @relation(fields: [payableId], references: [id])
   account       FinanceAccount? @relation("PayablePaymentAccount", fields: [accountId], references: [id], onDelete: SetNull)
-  journalEntry  JournalEntry? @relation("PayablePaymentJournalEntry", fields: [journalEntryId], references: [id], onDelete: SetNull)
-  createdByUser User?     @relation("PayablePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  journalEntry  JournalEntry?   @relation("PayablePaymentJournalEntry", fields: [journalEntryId], references: [id], onDelete: SetNull)
+  createdByUser User?           @relation("PayablePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([companyId])
   @@index([payableId])
@@ -909,13 +977,13 @@ model StockLedgerEntry {
 }
 
 model JournalReversal {
-  id                   String   @id @default(cuid())
-  companyId            String
-  originalJournalEntryId String @unique
-  reversalJournalEntryId String @unique
-  reason               String?
-  createdByUserId      String?
-  createdAt            DateTime @default(now())
+  id                     String   @id @default(cuid())
+  companyId              String
+  originalJournalEntryId String   @unique
+  reversalJournalEntryId String   @unique
+  reason                 String?
+  createdByUserId        String?
+  createdAt              DateTime @default(now())
 
   company              Company      @relation(fields: [companyId], references: [id])
   originalJournalEntry JournalEntry @relation("JournalReversalOriginal", fields: [originalJournalEntryId], references: [id])

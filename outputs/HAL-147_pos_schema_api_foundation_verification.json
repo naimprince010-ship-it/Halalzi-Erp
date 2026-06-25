@@ -1,0 +1,63 @@
+{
+  "issue": "HAL-147",
+  "title": "POS schema/API foundation verification",
+  "generatedAt": "2026-06-25T15:40:29.059Z",
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "schema_has_pos_models",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "schema_has_pos_stock_and_payment_enums",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "migration_creates_pos_tables",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "rbac_has_pos_permissions",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "rbac_has_cashier_template",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "shared_helper_validates_pos_sales",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "product_search_is_limited",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "sale_creation_is_atomic",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "sale_routes_require_pos_permissions",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "receipt_uses_print_helper",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "summary_endpoint_exists",
+      "passed": true,
+      "details": ""
+    }
+  ]
+}
