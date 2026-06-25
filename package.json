@@ -23,6 +23,7 @@
     "admin:ensure": "node scripts/ensure-admin-user.mjs",
     "check:env": "node scripts/check-production-env.mjs",
     "regression:dev": "node scripts/hal142-development-regression-hardening.mjs",
+    "regression:pilot": "node scripts/hal145-pilot-feedback-regression-suite.mjs",
     "regression:hal99": "node scripts/hal99-final-regression.mjs",
     "verify:hal137": "node scripts/hal137-quotation-invoice-verification.mjs",
     "verify:hal141": "node scripts/hal141-finance-cash-bank-expense-verification.mjs",

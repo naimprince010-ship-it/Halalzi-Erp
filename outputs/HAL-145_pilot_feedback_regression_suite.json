@@ -1,0 +1,392 @@
+{
+  "issue": "HAL-145",
+  "title": "Pilot feedback regression suite",
+  "generatedAt": "2026-06-25T08:42:14.547Z",
+  "mode": "static-non-destructive",
+  "totals": {
+    "total": 31,
+    "passed": 31,
+    "failed": 0
+  },
+  "workflows": [
+    {
+      "id": "auth-rbac-tenant",
+      "name": "Auth, RBAC, and tenant isolation",
+      "feedbackRisk": "Pilot users cannot safely share one system unless login, roles, and tenant boundaries remain strict.",
+      "runtimeScripts": [
+        "scripts/hal99-final-regression.mjs",
+        "scripts/hal144-role-verification.ts",
+        "scripts/production-smoke.mjs"
+      ],
+      "docs": [
+        "10-releases/HAL-142_DEVELOPMENT_REGRESSION_HARDENING.md"
+      ]
+    },
+    {
+      "id": "product-stock",
+      "name": "Product catalog, import/export, and stock visibility",
+      "feedbackRisk": "Pilot setup depends on clean product data, visible stock, CSV exports, and stock ledger traceability.",
+      "runtimeScripts": [
+        "scripts/hal99-final-regression.mjs",
+        "scripts/hal142-development-regression-hardening.mjs"
+      ],
+      "docs": [
+        "10-releases/HAL-140_CUSTOMER_READY_PRODUCT_DATA_WORKFLOW.md",
+        "10-releases/HAL-143_PRODUCTION_UX_POLISH_PASS.md"
+      ]
+    },
+    {
+      "id": "sales-quote-cash",
+      "name": "Sales quote-to-cash",
+      "feedbackRisk": "Common pilot selling flow must preserve quote lifecycle, order confirmation, invoice creation, stock, and finance linkage.",
+      "runtimeScripts": [
+        "scripts/hal99-final-regression.mjs",
+        "scripts/hal137-quotation-invoice-verification.mjs"
+      ],
+      "docs": [
+        "10-releases/HAL-138_PDF_PRINT_DOCUMENT_FOUNDATION.md"
+      ]
+    },
+    {
+      "id": "procurement-pay",
+      "name": "Procurement approval to payable",
+      "feedbackRisk": "Purchase approval, receiving, stock increase, payable creation, and cancellation safety are high-risk daily workflows.",
+      "runtimeScripts": [
+        "scripts/hal99-final-regression.mjs",
+        "scripts/hal141-finance-cash-bank-expense-verification.mjs",
+        "scripts/hal143-purchase-approval-verification.mjs"
+      ],
+      "docs": [
+        "10-releases/HAL-143_PRODUCTION_UX_POLISH_PASS.md",
+        "10-releases/HAL-142_DEVELOPMENT_REGRESSION_HARDENING.md"
+      ]
+    },
+    {
+      "id": "finance-ops",
+      "name": "Finance payments, cash/bank, expenses, and reports",
+      "feedbackRisk": "Pilot operators need visible receivables/payables, payments, expenses, cash/bank totals, and report endpoints.",
+      "runtimeScripts": [
+        "scripts/hal141-finance-cash-bank-expense-verification.mjs",
+        "scripts/hal142-development-regression-hardening.mjs"
+      ],
+      "docs": [
+        "10-releases/HAL-141_DOCUMENT_PRINTING_EXPANSION.md",
+        "10-releases/HAL-157_PERFORMANCE_SECURITY_REVIEW.md"
+      ]
+    },
+    {
+      "id": "print-export",
+      "name": "Print, PDF, and export safety",
+      "feedbackRisk": "Customers ask for printable orders/invoices and exports early; these must stay tenant-scoped and no-store.",
+      "runtimeScripts": [
+        "scripts/hal142-development-regression-hardening.mjs",
+        "scripts/hal99-final-regression.mjs"
+      ],
+      "docs": [
+        "10-releases/HAL-138_PDF_PRINT_DOCUMENT_FOUNDATION.md",
+        "10-releases/HAL-141_DOCUMENT_PRINTING_EXPANSION.md"
+      ]
+    },
+    {
+      "id": "production-smoke",
+      "name": "Production smoke and UI visibility handoff",
+      "feedbackRisk": "After deployment, pilot-facing routes need a repeatable smoke path without exposing credentials.",
+      "runtimeScripts": [
+        "scripts/production-smoke.mjs"
+      ],
+      "docs": [
+        "10-releases/HAL-132_AUTHENTICATED_PRODUCTION_SMOKE.md",
+        "10-releases/HAL-155_PAID_CLIENT_LAUNCH_CHECKLIST.md"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "pilot regression command inventory is wired in package.json",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "pilot regression matrix covers high-frequency workflows",
+      "ok": true,
+      "details": {
+        "workflows": [
+          "auth-rbac-tenant",
+          "product-stock",
+          "sales-quote-cash",
+          "procurement-pay",
+          "finance-ops",
+          "print-export",
+          "production-smoke"
+        ]
+      }
+    },
+    {
+      "name": "auth-rbac-tenant: required files exist",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "auth-rbac-tenant: runtime script coverage patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Auth, RBAC, and tenant isolation",
+        "feedbackRisk": "Pilot users cannot safely share one system unless login, roles, and tenant boundaries remain strict.",
+        "missingRuntimeGroups": []
+      }
+    },
+    {
+      "name": "auth-rbac-tenant: route behavior patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Auth, RBAC, and tenant isolation",
+        "missingRouteGroups": []
+      }
+    },
+    {
+      "name": "auth-rbac-tenant: UI visibility patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Auth, RBAC, and tenant isolation",
+        "missingUiGroups": []
+      }
+    },
+    {
+      "name": "product-stock: required files exist",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "product-stock: runtime script coverage patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Product catalog, import/export, and stock visibility",
+        "feedbackRisk": "Pilot setup depends on clean product data, visible stock, CSV exports, and stock ledger traceability.",
+        "missingRuntimeGroups": []
+      }
+    },
+    {
+      "name": "product-stock: route behavior patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Product catalog, import/export, and stock visibility",
+        "missingRouteGroups": []
+      }
+    },
+    {
+      "name": "product-stock: UI visibility patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Product catalog, import/export, and stock visibility",
+        "missingUiGroups": []
+      }
+    },
+    {
+      "name": "sales-quote-cash: required files exist",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "sales-quote-cash: runtime script coverage patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Sales quote-to-cash",
+        "feedbackRisk": "Common pilot selling flow must preserve quote lifecycle, order confirmation, invoice creation, stock, and finance linkage.",
+        "missingRuntimeGroups": []
+      }
+    },
+    {
+      "name": "sales-quote-cash: route behavior patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Sales quote-to-cash",
+        "missingRouteGroups": []
+      }
+    },
+    {
+      "name": "sales-quote-cash: UI visibility patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Sales quote-to-cash",
+        "missingUiGroups": []
+      }
+    },
+    {
+      "name": "procurement-pay: required files exist",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "procurement-pay: runtime script coverage patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Procurement approval to payable",
+        "feedbackRisk": "Purchase approval, receiving, stock increase, payable creation, and cancellation safety are high-risk daily workflows.",
+        "missingRuntimeGroups": []
+      }
+    },
+    {
+      "name": "procurement-pay: route behavior patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Procurement approval to payable",
+        "missingRouteGroups": []
+      }
+    },
+    {
+      "name": "procurement-pay: UI visibility patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Procurement approval to payable",
+        "missingUiGroups": []
+      }
+    },
+    {
+      "name": "finance-ops: required files exist",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "finance-ops: runtime script coverage patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Finance payments, cash/bank, expenses, and reports",
+        "feedbackRisk": "Pilot operators need visible receivables/payables, payments, expenses, cash/bank totals, and report endpoints.",
+        "missingRuntimeGroups": []
+      }
+    },
+    {
+      "name": "finance-ops: route behavior patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Finance payments, cash/bank, expenses, and reports",
+        "missingRouteGroups": []
+      }
+    },
+    {
+      "name": "finance-ops: UI visibility patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Finance payments, cash/bank, expenses, and reports",
+        "missingUiGroups": []
+      }
+    },
+    {
+      "name": "print-export: required files exist",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "print-export: runtime script coverage patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Print, PDF, and export safety",
+        "feedbackRisk": "Customers ask for printable orders/invoices and exports early; these must stay tenant-scoped and no-store.",
+        "missingRuntimeGroups": []
+      }
+    },
+    {
+      "name": "print-export: route behavior patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Print, PDF, and export safety",
+        "missingRouteGroups": []
+      }
+    },
+    {
+      "name": "print-export: UI visibility patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Print, PDF, and export safety",
+        "missingUiGroups": []
+      }
+    },
+    {
+      "name": "production-smoke: required files exist",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "production-smoke: runtime script coverage patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Production smoke and UI visibility handoff",
+        "feedbackRisk": "After deployment, pilot-facing routes need a repeatable smoke path without exposing credentials.",
+        "missingRuntimeGroups": []
+      }
+    },
+    {
+      "name": "production-smoke: route behavior patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Production smoke and UI visibility handoff",
+        "missingRouteGroups": []
+      }
+    },
+    {
+      "name": "production-smoke: UI visibility patterns are present",
+      "ok": true,
+      "details": {
+        "workflow": "Production smoke and UI visibility handoff",
+        "missingUiGroups": []
+      }
+    },
+    {
+      "name": "pilot feedback triggers map to follow-up Linear issues",
+      "ok": true,
+      "details": {
+        "followUps": [
+          {
+            "trigger": "product setup/import pain",
+            "issue": "HAL-116 / HAL-139 Product import/export polish and stock alerts"
+          },
+          {
+            "trigger": "POS demand from retail pilot",
+            "issue": "HAL-123-HAL-125 / HAL-146-HAL-148 POS sequence"
+          },
+          {
+            "trigger": "warehouse/location complexity",
+            "issue": "HAL-126-HAL-127 / HAL-149-HAL-150 warehouse sequence"
+          },
+          {
+            "trigger": "BI/KPI demand",
+            "issue": "HAL-128-HAL-129 / HAL-151-HAL-152 BI sequence"
+          },
+          {
+            "trigger": "AI CRM demand",
+            "issue": "HAL-130-HAL-131 / HAL-153-HAL-154 AI CRM sequence"
+          },
+          {
+            "trigger": "email sender/domain blocker",
+            "issue": "HAL-70 / HAL-92 Verify Resend sender domain"
+          }
+        ]
+      }
+    }
+  ],
+  "recommendedCommands": [
+    "npm run regression:pilot",
+    "npm run regression:dev",
+    "npm run regression:hal99",
+    "npm run verify:hal137",
+    "npm run verify:hal141",
+    "npm run verify:hal143",
+    "npm run smoke:prod"
+  ]
+}
