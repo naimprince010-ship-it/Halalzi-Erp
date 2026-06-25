@@ -1,0 +1,33 @@
+{
+  "issue": "HAL-161",
+  "status": "Done",
+  "generatedAt": "2026-06-25T00:00:00+06:00",
+  "documentPath": "10-releases/HAL-161_FIRST_PILOT_CLIENT_OUTREACH_SALES_PACK.md",
+  "artifactPath": "outputs/HAL-161_first_pilot_client_outreach_sales_pack.json",
+  "decision": "READY_FOR_FIRST_OUTREACH",
+  "target": "Bangladesh SMEs with 5-20 employees using spreadsheets, paper, WhatsApp, or disconnected tools",
+  "packageIncludes": [
+    "One-page pilot offer",
+    "Short pitch",
+    "WhatsApp first message",
+    "WhatsApp follow-up messages",
+    "Email pitch",
+    "LinkedIn/Facebook post",
+    "Discovery call script",
+    "Qualification scorecard",
+    "First 10 target customer list template",
+    "Call outcome template",
+    "Demo invite message",
+    "Payment/start message",
+    "Do-not-say promise guardrails",
+    "Weekly founder sales routine"
+  ],
+  "pilotLimits": {
+    "pilotPriceBdtPerMonth": 5000,
+    "maxPilotCompanies": 5,
+    "customCodeIncluded": false,
+    "remoteOnly": true,
+    "requiresInternalChampion": true
+  },
+  "recommendedNextAction": "Contact 10 warm or semi-warm prospects and qualify them before scheduling demos."
+}
