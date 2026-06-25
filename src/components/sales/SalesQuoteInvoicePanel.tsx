@@ -576,6 +576,14 @@ export function SalesQuoteInvoicePanel({
                       </div>
 
                       <div className="sales-order-actions-row">
+                        <a
+                          className="secondary-button"
+                          href={`/api/sales-quotations/${quotation.id}/print`}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Print
+                        </a>
                         {canUpdateQuotes && draftQuote ? (
                           <button className="secondary-button" type="button" onClick={() => startEditQuotation(quotation)}>
                             Edit draft
@@ -733,6 +741,16 @@ export function SalesQuoteInvoicePanel({
                       <strong>{existingInvoice?.invoiceNumber ?? "Not created"}</strong>
                     </div>
                     <div className="sales-order-actions-row">
+                      {existingInvoice ? (
+                        <a
+                          className="secondary-button"
+                          href={`/api/sales-invoices/${existingInvoice.id}/print`}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Print invoice
+                        </a>
+                      ) : null}
                       {canCreateInvoices ? (
                         <button
                           className="secondary-button"
@@ -795,6 +813,16 @@ export function SalesQuoteInvoicePanel({
                     <div>
                       <span>Paid amount</span>
                       <strong>{formatMoney(invoice.receivable?.paidAmount ?? null)}</strong>
+                    </div>
+                    <div className="sales-order-actions-row">
+                      <a
+                        className="secondary-button"
+                        href={`/api/sales-invoices/${invoice.id}/print`}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        Print
+                      </a>
                     </div>
                   </article>
                 ))

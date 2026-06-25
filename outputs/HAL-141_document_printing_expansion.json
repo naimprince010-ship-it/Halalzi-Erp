@@ -1,0 +1,26 @@
+{
+  "issue": "HAL-141",
+  "status": "Done",
+  "generatedAt": "2026-06-25T11:35:00+06:00",
+  "documentPath": "10-releases/HAL-141_DOCUMENT_PRINTING_EXPANSION.md",
+  "artifactPath": "outputs/HAL-141_document_printing_expansion.json",
+  "implemented": [
+    "Sales quotation print endpoint at /api/sales-quotations/[id]/print",
+    "Sales invoice print endpoint at /api/sales-invoices/[id]/print",
+    "Print action for quotation rows on the Sales dashboard",
+    "Print invoice action for already-invoiced eligible sales orders",
+    "Print action for invoice rows on the Sales dashboard"
+  ],
+  "security": [
+    "sales.quotations.read required for quotation print pages",
+    "sales.invoices.read or finance.read required for invoice print pages",
+    "All print documents are scoped by authenticated companyId",
+    "Printable values are HTML escaped by the shared renderer",
+    "Print responses use Cache-Control no-store"
+  ],
+  "qualityGates": [
+    "npm run lint: passed with pre-existing warnings in untracked scripts",
+    "npm run build:ci: passed"
+  ],
+  "recommendation": "Ready to close HAL-141. Continue with HAL-142 development regression hardening."
+}
