@@ -1,0 +1,23 @@
+{
+  "issue": "HAL-115",
+  "subIssue": "HAL-138",
+  "status": "Done",
+  "generatedAt": "2026-06-25T10:00:00+06:00",
+  "documentPath": "10-releases/HAL-138_PDF_PRINT_DOCUMENT_FOUNDATION.md",
+  "artifactPath": "outputs/HAL-138_pdf_print_document_foundation.json",
+  "implemented": [
+    "Shared printable HTML document renderer",
+    "Sales order print endpoint at /api/sales-orders/[id]/print",
+    "Purchase order print endpoint at /api/purchase-orders/[id]/print",
+    "Print action on Sales dashboard order rows",
+    "Print action on Procurement dashboard order rows"
+  ],
+  "security": [
+    "sales.read required for sales order print view",
+    "purchases.read required for purchase order print view",
+    "Documents are scoped by authenticated companyId",
+    "Printable values are HTML escaped",
+    "Print responses use Cache-Control no-store"
+  ],
+  "recommendation": "Ready for controlled pilot use as browser print/save-as-PDF foundation."
+}

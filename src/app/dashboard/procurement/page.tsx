@@ -766,6 +766,7 @@ export default function ProcurementDashboardPage() {
                         <div><span>Items</span><strong>{order.items.length}</strong></div>
                         <div><span>Updated</span><strong>{dateTime(order.updatedAt)}</strong></div>
                         <div className="procurement-row-actions">
+                          <a className="secondary-button" href={`/api/purchase-orders/${order.id}/print`} rel="noreferrer" target="_blank">Print</a>
                           {canUpdatePurchases && isDraft ? <button className="secondary-button" type="button" onClick={() => { setPurchaseEditId(order.id); setPurchaseEditForm({ vendorId: order.vendorId, discountAmount: String(order.discountAmount ?? 0), notes: order.notes ?? "", items: order.items.map((item) => ({ productId: item.productId, quantity: String(item.quantity), unitCost: String(item.unitCost) })) }); }}>Edit draft</button> : null}
                           {canSubmitPurchases && isDraft ? <button className="secondary-button" disabled={busy === `submit-${order.id}`} type="button" onClick={() => orderAction(order, "submit")}>Submit</button> : null}
                           {canApprovePurchases && isPendingApproval ? <button className="secondary-button" disabled={busy === `approve-${order.id}`} type="button" onClick={() => orderAction(order, "approve")}>Approve</button> : null}

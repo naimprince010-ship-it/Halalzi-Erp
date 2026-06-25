@@ -790,6 +790,15 @@ export default function SalesDashboardPage() {
                         </div>
 
                         <div className="sales-order-actions-row">
+                          <a
+                            className="secondary-button"
+                            href={`/api/sales-orders/${order.id}/print`}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            Print
+                          </a>
+
                           {canUpdateSales && draftOrder ? (
                             <button
                               className="secondary-button"
