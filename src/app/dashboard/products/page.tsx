@@ -93,6 +93,10 @@ function isLowStock(product: Product) {
   return product.status === "active" && product.stockQuantity <= LOW_STOCK_THRESHOLD;
 }
 
+function statusBadgeClass(status: ProductStatus) {
+  return `status-badge status-badge-${status}`;
+}
+
 export default function ProductsDashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -762,12 +766,14 @@ export default function ProductsDashboardPage() {
             ) : (
               <section className="users-list" aria-label="Products list">
                 {products.length === 0 ? (
-                  <article className="user-row user-row-empty">
+                  <article className="user-row user-row-empty empty-state">
                     <strong>No products found for this company.</strong>
+                    <span>Create the first product or import a clean catalog template.</span>
                   </article>
                 ) : filteredProducts.length === 0 ? (
-                  <article className="user-row user-row-empty">
+                  <article className="user-row user-row-empty empty-state">
                     <strong>No products match the current filters.</strong>
+                    <span>Try clearing the search, status, or stock signal filters.</span>
                   </article>
                 ) : (
                   filteredProducts.map((product) => (
@@ -808,7 +814,7 @@ export default function ProductsDashboardPage() {
                       </div>
                       <div>
                         <span>Status</span>
-                        <strong>{product.status}</strong>
+                        <strong className={statusBadgeClass(product.status)}>{product.status}</strong>
                       </div>
                       <div>
                         <span>Updated</span>

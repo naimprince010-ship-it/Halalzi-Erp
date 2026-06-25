@@ -92,6 +92,10 @@ function message(payload: ApiErrorPayload, fallback: string) {
   return payload.error?.message ?? fallback;
 }
 
+function statusBadgeClass(status: string | null | undefined) {
+  return `status-badge status-badge-${status ?? "neutral"}`;
+}
+
 export function FinanceCashBankExpensePanel({
   permissions,
   onError,
@@ -402,8 +406,9 @@ export function FinanceCashBankExpensePanel({
 
       <div className="users-list">
         {canReadExpenses && expenses.length === 0 ? (
-          <article className="user-row user-row-empty">
+          <article className="user-row user-row-empty empty-state">
             <strong>No expenses found.</strong>
+            <span>Posted expenses will appear here with their cash or bank source.</span>
           </article>
         ) : null}
 
@@ -423,7 +428,7 @@ export function FinanceCashBankExpensePanel({
             </div>
             <div>
               <span>Status</span>
-              <strong>{expense.status}</strong>
+              <strong className={statusBadgeClass(expense.status)}>{expense.status}</strong>
             </div>
             <div>
               <span>Category</span>

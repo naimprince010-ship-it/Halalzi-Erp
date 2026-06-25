@@ -146,6 +146,10 @@ function statusLabel(status: PurchaseStatus) {
   return labels[status];
 }
 
+function statusBadgeClass(status: PurchaseStatus | VendorStatus) {
+  return `status-badge status-badge-${status}`;
+}
+
 function purchasePayload(form: PurchaseForm) {
   return {
     vendorId: form.vendorId,
@@ -641,8 +645,9 @@ export default function ProcurementDashboardPage() {
                 <div className="users-list">
                   {vendorsLoading ? <article className="user-row skeleton-block" /> : null}
                   {!vendorsLoading && vendors.length === 0 ? (
-                    <article className="user-row user-row-empty">
+                    <article className="user-row user-row-empty empty-state">
                       <strong>No vendors found for this company.</strong>
+                      <span>Add an approved supplier before creating purchase orders.</span>
                     </article>
                   ) : null}
                   {vendors.map((vendor) => (
@@ -652,7 +657,7 @@ export default function ProcurementDashboardPage() {
                       <div><span>Contact</span><strong>{vendor.contactPerson || "-"}</strong></div>
                       <div><span>Phone</span><strong>{vendor.phone || "-"}</strong></div>
                       <div><span>Email</span><strong>{vendor.email || "-"}</strong></div>
-                      <div><span>Status</span><strong>{vendor.status}</strong></div>
+                      <div><span>Status</span><strong className={statusBadgeClass(vendor.status)}>{vendor.status}</strong></div>
                       <div><span>Updated</span><strong>{dateTime(vendor.updatedAt)}</strong></div>
                       <div className="procurement-row-actions">
                         {canUpdateVendors ? (
@@ -738,8 +743,9 @@ export default function ProcurementDashboardPage() {
                 <div className="users-list">
                   {ordersLoading ? <article className="user-row skeleton-block" /> : null}
                   {!ordersLoading && orders.length === 0 ? (
-                    <article className="user-row user-row-empty">
+                    <article className="user-row user-row-empty empty-state">
                       <strong>No purchase orders found for this company.</strong>
+                      <span>Create a draft purchase order to start the approval and receiving flow.</span>
                     </article>
                   ) : null}
                   {orders.map((order) => {
@@ -759,7 +765,7 @@ export default function ProcurementDashboardPage() {
                       <article className="purchase-order-row" key={order.id}>
                         <div><span>PO number</span><strong>{order.purchaseOrderNumber}</strong></div>
                         <div><span>Vendor</span><strong>{order.vendorNameSnapshot}</strong></div>
-                        <div><span>Status</span><strong>{statusLabel(order.status)}</strong></div>
+                        <div><span>Status</span><strong className={statusBadgeClass(order.status)}>{statusLabel(order.status)}</strong></div>
                         <div><span>Subtotal</span><strong>{money(order.subtotal)}</strong></div>
                         <div><span>Discount</span><strong>{money(order.discountAmount)}</strong></div>
                         <div><span>Total</span><strong>{money(order.totalAmount)}</strong></div>

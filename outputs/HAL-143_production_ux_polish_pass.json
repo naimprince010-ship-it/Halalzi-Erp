@@ -1,0 +1,30 @@
+{
+  "issue": "HAL-143",
+  "title": "Production UX polish pass",
+  "status": "implemented",
+  "scope": [
+    "Reusable status badge styling",
+    "Visible operational status badges across core dashboards",
+    "Clearer empty states with next-action guidance",
+    "Presentation-only polish with no API or database behavior change"
+  ],
+  "filesChanged": [
+    "10-releases/HAL-143_PRODUCTION_UX_POLISH_PASS.md",
+    "src/app/globals.css",
+    "src/app/dashboard/products/page.tsx",
+    "src/app/dashboard/sales/page.tsx",
+    "src/app/dashboard/procurement/page.tsx",
+    "src/app/dashboard/finance/page.tsx",
+    "src/components/finance/FinanceInvoiceSummaryPanel.tsx",
+    "src/components/finance/FinanceCashBankExpensePanel.tsx"
+  ],
+  "verification": {
+    "regressionDev": "passed: 21/21",
+    "lint": "passed: 0 errors, 2 pre-existing warnings in untracked local scripts",
+    "buildCi": "passed"
+  },
+  "notes": [
+    "This is a UI polish pass only.",
+    "Existing unrelated local files were not staged or modified."
+  ]
+}

@@ -44,6 +44,10 @@ function dateTime(value: string | null | undefined) {
   });
 }
 
+function statusBadgeClass(status: string | null | undefined) {
+  return `status-badge status-badge-${status ?? "neutral"}`;
+}
+
 export function FinanceInvoiceSummaryPanel() {
   const [invoices, setInvoices] = useState<SalesInvoice[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,8 +129,9 @@ export function FinanceInvoiceSummaryPanel() {
       ) : (
         <section className="users-list" aria-label="Invoice summary list">
           {invoices.length === 0 ? (
-            <article className="user-row user-row-empty">
+            <article className="user-row user-row-empty empty-state">
               <strong>No invoices available yet.</strong>
+              <span>Confirmed sales will surface here once invoice records exist.</span>
             </article>
           ) : (
             invoices.slice(0, 5).map((invoice) => (
@@ -141,11 +146,13 @@ export function FinanceInvoiceSummaryPanel() {
                 </div>
                 <div>
                   <span>Status</span>
-                  <strong>{invoice.status}</strong>
+                  <strong className={statusBadgeClass(invoice.status)}>{invoice.status}</strong>
                 </div>
                 <div>
                   <span>Receivable</span>
-                  <strong>{invoice.receivable?.status ?? "-"}</strong>
+                  <strong className={statusBadgeClass(invoice.receivable?.status)}>
+                    {invoice.receivable?.status ?? "-"}
+                  </strong>
                 </div>
                 <div>
                   <span>Due date</span>

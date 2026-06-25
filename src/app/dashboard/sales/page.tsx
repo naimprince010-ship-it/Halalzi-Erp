@@ -136,6 +136,10 @@ function normalizeApiError(payload: ApiErrorPayload, fallback: string) {
   return payload.error?.message ?? fallback;
 }
 
+function statusBadgeClass(status: SalesOrderStatus) {
+  return `status-badge status-badge-${status}`;
+}
+
 function buildOrderPayload(form: typeof emptyOrderForm) {
   return {
     customerName: form.customerName.trim(),
@@ -742,8 +746,9 @@ export default function SalesDashboardPage() {
             ) : (
               <section className="users-list" aria-label="Sales orders list">
                 {orders.length === 0 ? (
-                  <article className="user-row user-row-empty">
+                  <article className="user-row user-row-empty empty-state">
                     <strong>No sales orders found for this company.</strong>
+                    <span>Create the first draft order to start the quote-to-cash workflow.</span>
                   </article>
                 ) : (
                   orders.map((order) => {
@@ -762,7 +767,7 @@ export default function SalesDashboardPage() {
                         </div>
                         <div>
                           <span>Status</span>
-                          <strong>{order.status}</strong>
+                          <strong className={statusBadgeClass(order.status)}>{order.status}</strong>
                         </div>
                         <div>
                           <span>Subtotal</span>
