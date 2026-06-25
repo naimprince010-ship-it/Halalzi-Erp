@@ -1,0 +1,188 @@
+{
+  "issue": "HAL-142",
+  "generatedAt": "2026-06-25T05:27:50.724Z",
+  "mode": "static-non-destructive",
+  "totals": {
+    "total": 21,
+    "passed": 21,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "name": "package verification scripts are present",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "core module routes exist",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "core dashboard pages exist",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "src/app/api/products/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/products/[id]/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/products/[id]/stock-ledger/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/sales-orders/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/sales-quotations/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/sales-invoices/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/purchase-orders/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/finance/accounts/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/finance/receivables/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/finance/payables/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/crm/leads/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/crm/deals/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "src/app/api/audit-logs/route.ts has required guard patterns",
+      "ok": true,
+      "details": {
+        "missingGroups": []
+      }
+    },
+    {
+      "name": "print routes are tenant-scoped, RBAC-protected, and no-store",
+      "ok": true,
+      "details": {
+        "results": [
+          {
+            "route": "src/app/api/sales-orders/[id]/print/route.ts",
+            "ok": true,
+            "missingPatterns": []
+          },
+          {
+            "route": "src/app/api/purchase-orders/[id]/print/route.ts",
+            "ok": true,
+            "missingPatterns": []
+          },
+          {
+            "route": "src/app/api/sales-quotations/[id]/print/route.ts",
+            "ok": true,
+            "missingPatterns": []
+          },
+          {
+            "route": "src/app/api/sales-invoices/[id]/print/route.ts",
+            "ok": true,
+            "missingPatterns": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "finance report routes use explicit supported endpoints only",
+      "ok": true,
+      "details": {
+        "missing": [],
+        "invalidAggregateRoute": false
+      }
+    },
+    {
+      "name": "runtime regression and smoke scripts remain available",
+      "ok": true,
+      "details": {
+        "missing": []
+      }
+    },
+    {
+      "name": "API routes do not select sensitive hash/session fields",
+      "ok": true,
+      "details": {
+        "unsafeSelections": []
+      }
+    },
+    {
+      "name": "verification scripts do not target nonexistent /api/finance/reports",
+      "ok": true,
+      "details": {
+        "offenders": []
+      }
+    }
+  ],
+  "recommendedRuntimeCommands": [
+    "npm run regression:hal99",
+    "npm run verify:hal137",
+    "npm run verify:hal141",
+    "npm run verify:hal143",
+    "npm run smoke:prod"
+  ]
+}
