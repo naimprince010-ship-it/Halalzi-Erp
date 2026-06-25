@@ -1,0 +1,49 @@
+{
+  "issue": "HAL-148",
+  "linearIssue": "HAL-125",
+  "title": "POS dashboard UI verification",
+  "generatedAt": "2026-06-25T15:57:35.506Z",
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "pos_dashboard_route_exists",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "pos_requires_permissions",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "pos_product_search_wired",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "pos_sale_create_wired",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "pos_receipt_link_wired",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "pos_recent_sales_wired",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "pos_nav_added_to_core_pages",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "pos_styles_present",
+      "passed": true,
+      "details": ""
+    }
+  ]
+}
