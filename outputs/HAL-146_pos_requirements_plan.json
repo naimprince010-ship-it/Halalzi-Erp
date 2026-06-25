@@ -1,0 +1,62 @@
+{
+  "issue": "HAL-146",
+  "linearIssue": "HAL-123",
+  "title": "POS requirements plan",
+  "status": "planned",
+  "decision": "Proceed with a small POS MVP as an extension of existing sales, stock, and finance foundations.",
+  "existingLinearIssues": [
+    {
+      "id": "HAL-123",
+      "title": "HAL-146 POS requirements plan"
+    },
+    {
+      "id": "HAL-124",
+      "title": "HAL-147 POS schema and API foundation"
+    },
+    {
+      "id": "HAL-125",
+      "title": "HAL-148 POS dashboard UI"
+    },
+    {
+      "id": "HAL-45",
+      "title": "Future module: POS"
+    }
+  ],
+  "recommendedNewIssues": [
+    "HAL-144 POS stock, finance, and RBAC regression suite",
+    "HAL-145 POS receipt and print polish",
+    "HAL-146 POS cashier role and session hardening",
+    "HAL-147 POS production smoke and release signoff",
+    "HAL-148 POS high-volume product search performance hardening"
+  ],
+  "mvpScope": [
+    "Fast counter sale",
+    "Active product search",
+    "Cart and quantity controls",
+    "Immediate payment capture",
+    "Atomic stock deduction",
+    "Stock ledger entries",
+    "Finance linkage or explicit finance follow-up",
+    "Printable receipt",
+    "Cashier RBAC",
+    "Server-side indexed POS product search"
+  ],
+  "outOfScope": [
+    "Barcode hardware integration",
+    "Offline mode",
+    "Returns/refunds",
+    "Cash drawer hardware",
+    "VAT automation",
+    "Loyalty points"
+  ],
+  "verification": {
+    "regressionPilot": "passed: 31/31",
+    "lint": "passed: 0 errors, 2 pre-existing warnings in untracked local scripts",
+    "buildCi": "passed"
+  },
+  "performanceDecision": {
+    "largeCatalogAnswer": "Do not load all products into the browser. POS needs server-side indexed and paginated search.",
+    "largeCatalogSize": "100000+ products per tenant",
+    "target": "Sub-200ms indexed search under normal deployment conditions, measured in a follow-up hardening issue."
+  }
+}
