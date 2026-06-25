@@ -21,6 +21,7 @@
     "demo:hal127:helper": "node scripts/hal127-demo-helper.mjs",
     "rotate:admin": "node scripts/rotate-admin-credentials.mjs",
     "admin:ensure": "node scripts/ensure-admin-user.mjs",
+    "admin:sync-permissions": "node scripts/sync-admin-permissions.mjs",
     "check:env": "node scripts/check-production-env.mjs",
     "regression:dev": "node scripts/hal142-development-regression-hardening.mjs",
     "regression:pilot": "node scripts/hal145-pilot-feedback-regression-suite.mjs",
