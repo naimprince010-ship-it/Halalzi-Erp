@@ -76,24 +76,6 @@ async function syncPermissions() {
   };
 }
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-
-    if (searchParams.get("apply") !== "1") {
-      return NextResponse.json(
-        { error: { code: "VALIDATION_ERROR", message: "Add ?apply=1 to run permission sync." } },
-        { status: 400 },
-      );
-    }
-
-    const result = await syncPermissions();
-    return NextResponse.json({ ok: true, ...result }, { headers: { "Cache-Control": "no-store" } });
-  } catch (error) {
-    return errorResponse(error);
-  }
-}
-
 export async function POST() {
   try {
     const result = await syncPermissions();
