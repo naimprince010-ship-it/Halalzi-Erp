@@ -6,75 +6,100 @@ import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
 import { createDefaultCompanyRoles } from "@/lib/rbac/default-roles";
 
-export async function POST() {
-  try {
-    const currentUser = await requirePermission("roles.update");
-    const scope = companyScope(currentUser);
+async function syncPermissions() {
+  const currentUser = await requirePermission("roles.update");
+  const scope = companyScope(currentUser);
 
-    const beforePosPermissions = await prisma.permission.findMany({
+  const beforePosPermissions = await prisma.permission.findMany({
+    where: {
+      key: { startsWith: "pos." },
+      rolePermissions: {
+        some: {
+          role: {
+            companyId: scope.companyId,
+            key: "admin",
+          },
+        },
+      },
+    },
+    select: { key: true },
+    orderBy: { key: "asc" },
+  });
+
+  const { adminRole } = await createDefaultCompanyRoles(prisma, scope.companyId);
+
+  await prisma.userRole.createMany({
+    data: [{ userId: currentUser.user.id, roleId: adminRole.id }],
+    skipDuplicates: true,
+  });
+
+  const [permissionCount, adminPermissionCount, posPermissions] = await Promise.all([
+    prisma.permission.count(),
+    prisma.rolePermission.count({
+      where: {
+        roleId: adminRole.id,
+      },
+    }),
+    prisma.permission.findMany({
       where: {
         key: { startsWith: "pos." },
         rolePermissions: {
           some: {
-            role: {
-              companyId: scope.companyId,
-              key: "admin",
-            },
+            roleId: adminRole.id,
           },
         },
       },
       select: { key: true },
       orderBy: { key: "asc" },
-    });
+    }),
+  ]);
 
-    const { adminRole } = await createDefaultCompanyRoles(prisma, scope.companyId);
-
-    await prisma.userRole.createMany({
-      data: [{ userId: currentUser.user.id, roleId: adminRole.id }],
-      skipDuplicates: true,
-    });
-
-    const [permissionCount, adminPermissionCount, posPermissions] = await Promise.all([
-      prisma.permission.count(),
-      prisma.rolePermission.count({
-        where: {
-          roleId: adminRole.id,
-        },
-      }),
-      prisma.permission.findMany({
-        where: {
-          key: { startsWith: "pos." },
-          rolePermissions: {
-            some: {
-              roleId: adminRole.id,
-            },
-          },
-        },
-        select: { key: true },
-        orderBy: { key: "asc" },
-      }),
-    ]);
-
-    await recordAuditLog({
-      companyId: scope.companyId,
-      userId: currentUser.user.id,
-      action: "admin.permissions.sync",
-      entityType: "role",
-      entityId: adminRole.id,
-      summary: "Default permissions and role templates synced.",
-      metadata: {
-        permissionCount,
-        adminPermissionCount,
-        posPermissionCount: posPermissions.length,
-        previousPosPermissionCount: beforePosPermissions.length,
-      },
-    });
-
-    return NextResponse.json({
-      ok: true,
+  await recordAuditLog({
+    companyId: scope.companyId,
+    userId: currentUser.user.id,
+    action: "admin.permissions.sync",
+    entityType: "role",
+    entityId: adminRole.id,
+    summary: "Default permissions and role templates synced.",
+    metadata: {
       permissionCount,
       adminPermissionCount,
-      posPermissions: posPermissions.map((permission) => permission.key),
+      posPermissionCount: posPermissions.length,
+      previousPosPermissionCount: beforePosPermissions.length,
+    },
+  });
+
+  return {
+    permissionCount,
+    adminPermissionCount,
+    posPermissions: posPermissions.map((permission) => permission.key),
+  };
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+
+    if (searchParams.get("apply") !== "1") {
+      return NextResponse.json(
+        { error: { code: "VALIDATION_ERROR", message: "Add ?apply=1 to run permission sync." } },
+        { status: 400 },
+      );
+    }
+
+    const result = await syncPermissions();
+    return NextResponse.json({ ok: true, ...result }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function POST() {
+  try {
+    const result = await syncPermissions();
+    return NextResponse.json({
+      ok: true,
+      ...result,
     });
   } catch (error) {
     return errorResponse(error);
