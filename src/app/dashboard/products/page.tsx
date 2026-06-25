@@ -36,6 +36,8 @@ type ApiErrorPayload = {
   };
 };
 
+const LOW_STOCK_THRESHOLD = 10;
+
 const navItems = [
   { label: "Dashboard", permission: "dashboard.read", href: "/dashboard" },
   { label: "Company", permission: "company.read", href: "/dashboard/company" },
@@ -87,6 +89,10 @@ function duplicateSkuMessage() {
   return "SKU already exists for your company. Please use a different SKU.";
 }
 
+function isLowStock(product: Product) {
+  return product.status === "active" && product.stockQuantity <= LOW_STOCK_THRESHOLD;
+}
+
 export default function ProductsDashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -102,7 +108,11 @@ export default function ProductsDashboardPage() {
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [archiveSuccess, setArchiveSuccess] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [templateExporting, setTemplateExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all");
+  const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all");
   const [creating, setCreating] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [archivingProductId, setArchivingProductId] = useState<string | null>(null);
@@ -140,6 +150,63 @@ export default function ProductsDashboardPage() {
     return navItems.filter((item) => currentUser.permissions.includes(item.permission));
   }, [currentUser]);
 
+  const productSummary = useMemo(() => {
+    return products.reduce(
+      (summary, product) => {
+        if (product.status === "active") {
+          summary.active += 1;
+        } else {
+          summary.inactive += 1;
+        }
+
+        if (product.stockQuantity === 0) {
+          summary.outOfStock += 1;
+        }
+
+        if (isLowStock(product)) {
+          summary.lowStock += 1;
+        }
+
+        return summary;
+      },
+      {
+        active: 0,
+        inactive: 0,
+        lowStock: 0,
+        outOfStock: 0,
+      },
+    );
+  }, [products]);
+
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set(
+      products
+        .map((product) => product.category?.trim())
+        .filter((category): category is string => Boolean(category)),
+    );
+
+    return uniqueCategories.size;
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        product.name.toLowerCase().includes(normalizedSearch) ||
+        product.sku.toLowerCase().includes(normalizedSearch) ||
+        (product.category ?? "").toLowerCase().includes(normalizedSearch);
+      const matchesStatus = statusFilter === "all" || product.status === statusFilter;
+      const matchesStock =
+        stockFilter === "all" ||
+        (stockFilter === "low" && isLowStock(product)) ||
+        (stockFilter === "out" && product.stockQuantity === 0);
+
+      return matchesSearch && matchesStatus && matchesStock;
+    });
+  }, [products, searchTerm, statusFilter, stockFilter]);
+
   async function handleExport() {
     setExporting(true);
     setExportError(null);
@@ -150,6 +217,19 @@ export default function ProductsDashboardPage() {
       setExportError(error instanceof Error ? error.message : "Export failed. Please try again.");
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleTemplateExport() {
+    setTemplateExporting(true);
+    setExportError(null);
+
+    try {
+      await downloadCsvExport("/api/exports/products/template");
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "Template download failed. Please try again.");
+    } finally {
+      setTemplateExporting(false);
     }
   }
 
@@ -477,10 +557,19 @@ export default function ProductsDashboardPage() {
                 <h2>Manage products and stock visibility</h2>
                 <p>
                   Track product profile, commercial pricing, stock quantity, and archive status in
-                  your company workspace.
+                  your company workspace. Low stock means active products with {LOW_STOCK_THRESHOLD} or
+                  fewer units.
                 </p>
               </div>
               <div className="hero-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleTemplateExport}
+                  disabled={templateExporting}
+                >
+                  {templateExporting ? "Downloading..." : "Download template"}
+                </button>
                 <button
                   className="secondary-button"
                   type="button"
@@ -493,6 +582,25 @@ export default function ProductsDashboardPage() {
             </section>
 
             {exportError ? <div className="form-error">{exportError}</div> : null}
+
+            <section className="dashboard-grid product-summary-grid" aria-label="Product summary">
+              <article className="stat-tile">
+                <span>Active products</span>
+                <strong>{productSummary.active}</strong>
+              </article>
+              <article className="stat-tile">
+                <span>Low stock</span>
+                <strong>{productSummary.lowStock}</strong>
+              </article>
+              <article className="stat-tile">
+                <span>Out of stock</span>
+                <strong>{productSummary.outOfStock}</strong>
+              </article>
+              <article className="stat-tile">
+                <span>Categories</span>
+                <strong>{categories}</strong>
+              </article>
+            </section>
 
             {createError ? <div className="form-error">{createError}</div> : null}
             {createSuccess ? <div className="form-success">{createSuccess}</div> : null}
@@ -600,6 +708,52 @@ export default function ProductsDashboardPage() {
               </section>
             ) : null}
 
+            <section className="products-workflow-panel" aria-label="Product data workflow">
+              <div>
+                <p className="eyebrow">Setup workflow</p>
+                <h2>Prepare clean product data before sales and procurement</h2>
+                <p>
+                  Use the template columns for SKU, name, category, sale price, cost price,
+                  opening stock, and status. Keep SKU unique per company and use stock ledger
+                  adjustments for quantity changes after setup.
+                </p>
+              </div>
+              <div className="product-filter-grid">
+                <label className="field">
+                  <span>Search products</span>
+                  <input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Name, SKU, or category"
+                  />
+                </label>
+                <label className="field">
+                  <span>Status</span>
+                  <select
+                    className="role-select"
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value as "all" | ProductStatus)}
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Stock signal</span>
+                  <select
+                    className="role-select"
+                    value={stockFilter}
+                    onChange={(event) => setStockFilter(event.target.value as "all" | "low" | "out")}
+                  >
+                    <option value="all">All stock</option>
+                    <option value="low">Low stock</option>
+                    <option value="out">Out of stock</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
             {productsLoading ? (
               <section className="users-list" aria-label="Products loading">
                 <article className="user-row skeleton-block" />
@@ -611,9 +765,16 @@ export default function ProductsDashboardPage() {
                   <article className="user-row user-row-empty">
                     <strong>No products found for this company.</strong>
                   </article>
+                ) : filteredProducts.length === 0 ? (
+                  <article className="user-row user-row-empty">
+                    <strong>No products match the current filters.</strong>
+                  </article>
                 ) : (
-                  products.map((product) => (
-                    <article className="product-row" key={product.id}>
+                  filteredProducts.map((product) => (
+                    <article
+                      className={isLowStock(product) ? "product-row product-row-low-stock" : "product-row"}
+                      key={product.id}
+                    >
                       <div>
                         <span>Name</span>
                         <strong>{product.name}</strong>
@@ -636,7 +797,14 @@ export default function ProductsDashboardPage() {
                       </div>
                       <div>
                         <span>Stock</span>
-                        <strong>{product.stockQuantity}</strong>
+                        <strong>
+                          {product.stockQuantity}
+                          {product.stockQuantity === 0 ? (
+                            <small className="stock-signal stock-signal-critical">Out</small>
+                          ) : isLowStock(product) ? (
+                            <small className="stock-signal">Low</small>
+                          ) : null}
+                        </strong>
                       </div>
                       <div>
                         <span>Status</span>

@@ -1,0 +1,31 @@
+{
+  "issue": "HAL-140",
+  "status": "Done",
+  "generatedAt": "2026-06-25T11:20:00+06:00",
+  "documentPath": "10-releases/HAL-140_CUSTOMER_READY_PRODUCT_DATA_WORKFLOW.md",
+  "artifactPath": "outputs/HAL-140_customer_ready_product_data_workflow.json",
+  "implemented": [
+    "Product dashboard summary tiles for active, low-stock, out-of-stock, and category counts",
+    "Customer-ready product setup workflow guidance on the products dashboard",
+    "Client-side product search by name, SKU, and category",
+    "Status and stock-signal filters for product review",
+    "Low-stock row highlighting and inline stock badges",
+    "Protected CSV template endpoint at /api/exports/products/template",
+    "Download template action on the products dashboard"
+  ],
+  "security": [
+    "Template endpoint requires products.read",
+    "Existing product write APIs remain company-scoped",
+    "Stock edits remain protected by inventory.adjust",
+    "Existing CSV escaping and formula-injection neutralization are reused"
+  ],
+  "deferred": [
+    "Bulk product import is deferred to a separate dry-run plus confirmation issue",
+    "Per-product configurable reorder points are deferred until inventory depth work"
+  ],
+  "qualityGates": [
+    "npm run lint: passed with pre-existing warnings in untracked scripts",
+    "npm run build:ci: passed"
+  ],
+  "recommendation": "Ready to close HAL-140. Bulk import should be handled as a separate dry-run and confirmation issue."
+}
