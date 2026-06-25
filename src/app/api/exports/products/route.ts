@@ -4,6 +4,8 @@ import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
 import { csvResponse, toCsv, type CsvColumn } from "@/lib/export/csv";
 
+const LOW_STOCK_THRESHOLD = 10;
+
 // Only non-sensitive product fields are exported.
 const safeProductSelect = {
   id: true,
@@ -31,6 +33,13 @@ type ProductExportRow = {
   updatedAt: Date;
 };
 
+function stockSignal(row: ProductExportRow) {
+  if (row.status !== "active") return "Inactive";
+  if (row.stockQuantity === 0) return "Out of stock";
+  if (row.stockQuantity <= LOW_STOCK_THRESHOLD) return "Low stock";
+  return "Healthy";
+}
+
 const columns: CsvColumn<ProductExportRow>[] = [
   { header: "ID", value: (row) => row.id },
   { header: "Name", value: (row) => row.name },
@@ -39,6 +48,8 @@ const columns: CsvColumn<ProductExportRow>[] = [
   { header: "Sale Price", value: (row) => row.salePrice },
   { header: "Cost Price", value: (row) => row.costPrice },
   { header: "Stock Quantity", value: (row) => row.stockQuantity },
+  { header: "Stock Signal", value: (row) => stockSignal(row) },
+  { header: "Low Stock Threshold", value: () => LOW_STOCK_THRESHOLD },
   { header: "Status", value: (row) => row.status },
   { header: "Created At", value: (row) => row.createdAt },
   { header: "Updated At", value: (row) => row.updatedAt },

@@ -1,0 +1,25 @@
+{
+  "issue": "HAL-139",
+  "linearIssue": "HAL-116",
+  "title": "Product import/export polish and stock alerts",
+  "status": "implemented",
+  "mode": "ui-and-export-polish",
+  "changes": [
+    "Added actionable stock alert panel on the products dashboard",
+    "Added top low-stock/out-of-stock product watchlist",
+    "Added quick filter actions for low-stock and out-of-stock products",
+    "Added per-row stock signal to product list",
+    "Added Stock Signal and Low Stock Threshold columns to product CSV export"
+  ],
+  "guardrails": [
+    "No database schema changes",
+    "No destructive database operations",
+    "No bulk import write endpoint added",
+    "Tenant scoping and RBAC preserved"
+  ],
+  "verification": {
+    "regressionPilot": "passed: 31/31",
+    "lint": "passed: 0 errors, 2 pre-existing warnings in untracked local scripts",
+    "buildCi": "passed"
+  }
+}

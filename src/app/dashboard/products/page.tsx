@@ -93,6 +93,13 @@ function isLowStock(product: Product) {
   return product.status === "active" && product.stockQuantity <= LOW_STOCK_THRESHOLD;
 }
 
+function stockSignal(product: Product) {
+  if (product.status !== "active") return "Inactive";
+  if (product.stockQuantity === 0) return "Out of stock";
+  if (isLowStock(product)) return "Low stock";
+  return "Healthy";
+}
+
 function statusBadgeClass(status: ProductStatus) {
   return `status-badge status-badge-${status}`;
 }
@@ -190,6 +197,13 @@ export default function ProductsDashboardPage() {
     );
 
     return uniqueCategories.size;
+  }, [products]);
+
+  const stockAlerts = useMemo(() => {
+    return products
+      .filter((product) => product.status === "active" && product.stockQuantity <= LOW_STOCK_THRESHOLD)
+      .sort((first, second) => first.stockQuantity - second.stockQuantity || first.name.localeCompare(second.name))
+      .slice(0, 5);
   }, [products]);
 
   const filteredProducts = useMemo(() => {
@@ -606,6 +620,62 @@ export default function ProductsDashboardPage() {
               </article>
             </section>
 
+            {stockAlerts.length > 0 ? (
+              <section className="product-stock-alert-panel" aria-label="Product stock alerts">
+                <div>
+                  <p className="eyebrow">Stock alerts</p>
+                  <h2>{productSummary.outOfStock > 0 ? "Restock action needed" : "Low stock watchlist"}</h2>
+                  <p>
+                    {productSummary.outOfStock > 0
+                      ? `${productSummary.outOfStock} active product${productSummary.outOfStock === 1 ? "" : "s"} are out of stock.`
+                      : `${productSummary.lowStock} active product${productSummary.lowStock === 1 ? "" : "s"} are at or below ${LOW_STOCK_THRESHOLD} units.`}
+                  </p>
+                </div>
+                <div className="product-alert-list">
+                  {stockAlerts.map((product) => (
+                    <button
+                      className="product-alert-item"
+                      key={product.id}
+                      type="button"
+                      onClick={() => {
+                        setSearchTerm(product.sku);
+                        setStatusFilter("all");
+                        setStockFilter(product.stockQuantity === 0 ? "out" : "low");
+                      }}
+                    >
+                      <span>{product.sku}</span>
+                      <strong>{product.name}</strong>
+                      <small>{product.stockQuantity} units</small>
+                    </button>
+                  ))}
+                </div>
+                <div className="product-alert-actions">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setStatusFilter("all");
+                      setStockFilter("low");
+                    }}
+                  >
+                    View low stock
+                  </button>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setStatusFilter("all");
+                      setStockFilter("out");
+                    }}
+                  >
+                    View out of stock
+                  </button>
+                </div>
+              </section>
+            ) : null}
+
             {createError ? <div className="form-error">{createError}</div> : null}
             {createSuccess ? <div className="form-success">{createSuccess}</div> : null}
             {editError ? <div className="form-error">{editError}</div> : null}
@@ -811,6 +881,10 @@ export default function ProductsDashboardPage() {
                             <small className="stock-signal">Low</small>
                           ) : null}
                         </strong>
+                      </div>
+                      <div>
+                        <span>Stock signal</span>
+                        <strong>{stockSignal(product)}</strong>
                       </div>
                       <div>
                         <span>Status</span>
