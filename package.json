@@ -31,6 +31,7 @@
     "verify:hal143": "node scripts/hal143-purchase-approval-verification.mjs",
     "verify:hal147": "node scripts/hal147-pos-api-foundation-verification.mjs",
     "verify:hal148": "node scripts/hal148-pos-dashboard-ui-verification.mjs",
+    "regression:pos": "node scripts/hal149-pos-stock-finance-rbac-regression.mjs",
     "build:migrate": "prisma generate && node scripts/production-migrate-deploy.mjs && next build",
     "check": "npm run lint && npm run build:ci"
   },

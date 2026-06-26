@@ -1,0 +1,88 @@
+{
+  "issue": "HAL-149",
+  "title": "POS stock, finance, and RBAC regression hardening",
+  "generatedAt": "2026-06-26T03:25:31.005Z",
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "pos_permissions_registered",
+      "passed": true,
+      "details": "Default RBAC permissions must include the full POS permission family."
+    },
+    {
+      "name": "admin_role_receives_pos_permissions",
+      "passed": true,
+      "details": "Company Admin must receive POS permissions during role sync."
+    },
+    {
+      "name": "cashier_role_is_limited",
+      "passed": true,
+      "details": "Cashier can sell and print receipts without finance or cancel authority."
+    },
+    {
+      "name": "pos_sale_creation_is_permissioned_and_atomic",
+      "passed": true,
+      "details": "POS sale creation must be protected and run inside one transaction."
+    },
+    {
+      "name": "pos_sale_requires_full_payment",
+      "passed": true,
+      "details": "Completed sales must not be created with underpayment."
+    },
+    {
+      "name": "pos_sale_validates_payment_account_scope",
+      "passed": true,
+      "details": "Linked payment accounts must belong to the tenant and be active cash/bank/mobile-money accounts."
+    },
+    {
+      "name": "pos_sale_decrements_stock_safely",
+      "passed": true,
+      "details": "Stock decrement must be tenant-scoped and guarded against concurrent oversell."
+    },
+    {
+      "name": "pos_sale_writes_stock_ledger",
+      "passed": true,
+      "details": "Every completed POS item must create a negative stock-ledger movement."
+    },
+    {
+      "name": "pos_sale_links_finance_cash_account",
+      "passed": true,
+      "details": "When a payment account is selected, the sale total must increase the account balance."
+    },
+    {
+      "name": "pos_sale_audit_log_recorded",
+      "passed": true,
+      "details": "Completed POS sales must leave audit evidence."
+    },
+    {
+      "name": "pos_product_search_is_scoped_and_bounded",
+      "passed": true,
+      "details": "POS product search must avoid loading the full catalog and only expose active tenant products."
+    },
+    {
+      "name": "pos_receipt_is_scoped_permissioned_and_not_cached",
+      "passed": true,
+      "details": "Receipt printing must be tenant-scoped, permissioned, printable, and uncached."
+    },
+    {
+      "name": "pos_shared_blocks_duplicates_and_bad_stock",
+      "passed": true,
+      "details": "The shared validator must reject duplicate lines and impossible quantities before transaction side effects."
+    },
+    {
+      "name": "pos_dashboard_uses_pos_endpoints_and_permissions",
+      "passed": true,
+      "details": "Cashier UI must use the bounded POS endpoints and hide actions when permissions are missing."
+    },
+    {
+      "name": "admin_permission_sync_endpoint_is_guarded",
+      "passed": true,
+      "details": "Production permission repair must remain an authenticated POST-only admin action."
+    },
+    {
+      "name": "package_exposes_pos_regression_command",
+      "passed": true,
+      "details": "The regression suite must be runnable from npm scripts."
+    }
+  ]
+}
