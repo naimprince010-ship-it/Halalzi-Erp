@@ -1,0 +1,58 @@
+{
+  "issue": "HAL-148",
+  "title": "POS high-volume product search performance hardening",
+  "generatedAt": "2026-07-02T06:34:18.425Z",
+  "status": "PASS",
+  "performanceTarget": {
+    "catalogSize": "100k+ products per tenant",
+    "target": "sub-200ms indexed search on normal deployment conditions",
+    "strategy": "tenant/status composite indexes, Postgres trigram indexes for contains search, keyset cursor pagination, 24-row UI pages, 50-row API cap"
+  },
+  "checks": [
+    {
+      "name": "schema_has_composite_product_search_indexes",
+      "passed": true,
+      "details": "Product model should expose tenant/status/search-field composite indexes."
+    },
+    {
+      "name": "migration_adds_postgres_trigram_search_indexes",
+      "passed": true,
+      "details": "Postgres trigram indexes support fast contains-style POS search for large catalogs."
+    },
+    {
+      "name": "pos_search_api_uses_keyset_pagination",
+      "passed": true,
+      "details": "POS product search should page forward with a cursor instead of offset or full-catalog loads."
+    },
+    {
+      "name": "pos_search_api_is_tenant_scoped_bounded_and_active_only",
+      "passed": true,
+      "details": "The endpoint must stay permissioned, tenant-scoped, active-only, and capped to 50 rows per call."
+    },
+    {
+      "name": "pos_search_api_orders_stably_for_cursor",
+      "passed": true,
+      "details": "Cursor pagination needs stable ordering so the next page is deterministic."
+    },
+    {
+      "name": "pos_dashboard_uses_bounded_search_endpoint",
+      "passed": true,
+      "details": "POS UI should load small pages from POS-specific search and append only on request."
+    },
+    {
+      "name": "pos_dashboard_keeps_debounce",
+      "passed": true,
+      "details": "Typing in the cashier search field should remain debounced."
+    },
+    {
+      "name": "pos_pagination_styles_present",
+      "passed": true,
+      "details": "Load-more control should have stable layout styling."
+    },
+    {
+      "name": "package_exposes_hal148_verifier",
+      "passed": true,
+      "details": "HAL-148 verification must be runnable from npm scripts."
+    }
+  ]
+}

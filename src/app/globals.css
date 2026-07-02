@@ -1902,6 +1902,12 @@ button {
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
 }
 
+.pos-product-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
 .pos-product-card {
   background: #fbfdff;
   border: 1px solid var(--border);

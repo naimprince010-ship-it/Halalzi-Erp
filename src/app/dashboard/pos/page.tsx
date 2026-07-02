@@ -58,6 +58,14 @@ type ApiErrorPayload = {
   };
 };
 
+type PosProductsResponse = {
+  data?: PosProduct[];
+  meta?: {
+    hasMore?: boolean;
+    nextCursor?: string | null;
+  };
+} & ApiErrorPayload;
+
 type CartItem = {
   product: PosProduct;
   quantity: number;
@@ -128,6 +136,7 @@ export default function PosDashboardPage() {
   const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [productsNextCursor, setProductsNextCursor] = useState<string | null>(null);
   const [salesLoading, setSalesLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -175,7 +184,7 @@ export default function PosDashboardPage() {
         if (!user.permissions.includes("pos.read")) return;
 
         await Promise.all([
-          loadProducts(""),
+          loadProducts("", { append: false }),
           loadRecentSales(),
           user.permissions.includes("finance.read") ? loadPaymentAccounts() : Promise.resolve(),
         ]);
@@ -196,27 +205,30 @@ export default function PosDashboardPage() {
   useEffect(() => {
     if (!canReadPos) return;
     const handle = window.setTimeout(() => {
-      void loadProducts(search);
+      void loadProducts(search, { append: false });
     }, 250);
 
     return () => window.clearTimeout(handle);
   }, [search, canReadPos]);
 
-  async function loadProducts(query: string) {
+  async function loadProducts(query: string, options: { append: boolean; cursor?: string | null }) {
     setProductsLoading(true);
     setPageError(null);
 
     try {
       const params = new URLSearchParams({ limit: "24" });
       if (query.trim()) params.set("search", query.trim());
+      if (options.cursor) params.set("cursor", options.cursor);
       const response = await fetch(`/api/pos/products?${params.toString()}`, { cache: "no-store" });
-      const payload = (await response.json().catch(() => ({}))) as { data?: PosProduct[] } & ApiErrorPayload;
+      const payload = (await response.json().catch(() => ({}))) as PosProductsResponse;
 
       if (!response.ok) {
         throw new Error(apiMessage(payload, "Could not load POS products."));
       }
 
-      setProducts(payload.data ?? []);
+      const nextProducts = payload.data ?? [];
+      setProducts((current) => (options.append ? [...current, ...nextProducts] : nextProducts));
+      setProductsNextCursor(payload.meta?.hasMore ? payload.meta.nextCursor ?? null : null);
     } catch (error) {
       setPageError(error instanceof Error ? error.message : "Could not load POS products.");
     } finally {
@@ -340,7 +352,11 @@ export default function PosDashboardPage() {
       setCustomerPhone("");
       setDiscountAmount("0");
       setPaidAmount("");
-      await Promise.all([loadProducts(search), loadRecentSales(), canReadFinance ? loadPaymentAccounts() : Promise.resolve()]);
+      await Promise.all([
+        loadProducts(search, { append: false }),
+        loadRecentSales(),
+        canReadFinance ? loadPaymentAccounts() : Promise.resolve(),
+      ]);
     } catch (error) {
       setSaleError(error instanceof Error ? error.message : "Could not complete POS sale.");
     } finally {
@@ -454,7 +470,9 @@ export default function PosDashboardPage() {
                     <p className="eyebrow">Products</p>
                     <h2>Search catalog</h2>
                   </div>
-                  <span>{productsLoading ? "Loading..." : `${products.length} shown`}</span>
+                  <span>
+                    {productsLoading ? "Loading..." : `${products.length} shown${productsNextCursor ? " +" : ""}`}
+                  </span>
                 </div>
 
                 <label className="field pos-search-field">
@@ -490,6 +508,19 @@ export default function PosDashboardPage() {
                     ))
                   )}
                 </div>
+
+                {productsNextCursor ? (
+                  <div className="pos-product-pagination">
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      disabled={productsLoading}
+                      onClick={() => loadProducts(search, { append: true, cursor: productsNextCursor })}
+                    >
+                      {productsLoading ? "Loading..." : "Load more products"}
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <form className="pos-cart-panel" onSubmit={completeSale}>

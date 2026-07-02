@@ -270,6 +270,9 @@ model Product {
   @@index([companyId])
   @@index([status])
   @@index([companyId, name])
+  @@index([companyId, status, sku])
+  @@index([companyId, status, name])
+  @@index([companyId, status, category])
 }
 
 model SalesOrder {

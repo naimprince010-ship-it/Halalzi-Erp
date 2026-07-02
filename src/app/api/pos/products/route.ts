@@ -14,6 +14,11 @@ function parseLimit(value: string | null) {
   return Math.min(Math.max(Math.trunc(parsed), 1), 50);
 }
 
+function parseCursor(value: string | null) {
+  const cursor = value?.trim();
+  return cursor ? cursor : null;
+}
+
 export async function GET(request: Request) {
   try {
     const currentUser = await requirePermission("pos.read");
@@ -21,6 +26,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search")?.trim() ?? "";
     const limit = parseLimit(searchParams.get("limit"));
+    const cursor = parseCursor(searchParams.get("cursor"));
 
     const products = await prisma.product.findMany({
       where: {
@@ -44,23 +50,22 @@ export async function GET(request: Request) {
         salePrice: true,
         stockQuantity: true,
       },
-      orderBy: [{ name: "asc" }, { sku: "asc" }],
-      take: limit * 2,
+      orderBy: [{ name: "asc" }, { sku: "asc" }, { id: "asc" }],
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      take: limit + 1,
     });
 
-    const sortedProducts = search
-      ? products.sort((left, right) => {
-          const leftExact = left.sku.toLowerCase() === search.toLowerCase() ? 0 : 1;
-          const rightExact = right.sku.toLowerCase() === search.toLowerCase() ? 0 : 1;
-          return leftExact - rightExact || left.name.localeCompare(right.name);
-        })
-      : products;
+    const pageProducts = products.slice(0, limit);
+    const nextCursor = products.length > limit ? pageProducts.at(-1)?.id ?? null : null;
 
     return NextResponse.json({
-      data: sortedProducts.slice(0, limit),
+      data: pageProducts,
       meta: {
         limit,
         search: search || null,
+        cursor,
+        nextCursor,
+        hasMore: nextCursor !== null,
       },
     });
   } catch (error) {
