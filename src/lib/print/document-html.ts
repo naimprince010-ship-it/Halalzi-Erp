@@ -14,6 +14,7 @@ type DocumentMeta = {
 type PrintableDocument = {
   title: string;
   documentNumber: string;
+  documentNumberLabel?: string;
   companyName: string;
   partyLabel: string;
   partyName: string;
@@ -27,9 +28,12 @@ type PrintableDocument = {
   subtotal: number | string;
   discountAmount: number | string;
   totalAmount: number | string;
+  tenderedAmount?: number | string | null;
+  changeAmount?: number | string | null;
   unitAmountLabel: string;
   lines: DocumentLine[];
   meta?: DocumentMeta[];
+  footerText?: string | null;
 };
 
 function escapeHtml(value: string) {
@@ -256,6 +260,14 @@ export function renderPrintableDocument(document: PrintableDocument) {
       padding-top: 12px;
     }
 
+    .receipt-footer {
+      border-top: 1px dashed #9aa7b8;
+      color: #5c677a;
+      margin-top: 28px;
+      padding-top: 16px;
+      text-align: center;
+    }
+
     .print-actions {
       margin: 0 auto 16px;
       max-width: 920px;
@@ -303,7 +315,7 @@ export function renderPrintableDocument(document: PrintableDocument) {
         <p class="muted">${text(document.companyName)}</p>
       </div>
       <div class="document-number">
-        <span>Document number</span>
+        <span>${text(document.documentNumberLabel ?? "Document number")}</span>
         <strong>${text(document.documentNumber)}</strong>
       </div>
     </header>
@@ -344,10 +356,22 @@ export function renderPrintableDocument(document: PrintableDocument) {
       <div><span>Subtotal</span><strong>${money(document.subtotal)}</strong></div>
       <div><span>Discount</span><strong>${money(document.discountAmount)}</strong></div>
       <div class="grand-total"><span>Total</span><strong>${money(document.totalAmount)}</strong></div>
+      ${
+        document.tenderedAmount === undefined || document.tenderedAmount === null
+          ? ""
+          : `<div><span>Tendered</span><strong>${money(document.tenderedAmount)}</strong></div>`
+      }
+      ${
+        document.changeAmount === undefined || document.changeAmount === null
+          ? ""
+          : `<div><span>Change</span><strong>${money(document.changeAmount)}</strong></div>`
+      }
     </section>
 
     <h2>Notes</h2>
     <section class="notes-box">${text(document.notes)}</section>
+
+    ${document.footerText ? `<p class="receipt-footer">${text(document.footerText)}</p>` : ""}
   </main>
 </body>
 </html>`;

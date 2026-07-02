@@ -45,7 +45,7 @@ check("rbac_has_cashier_template", includesAll(roles, ['key: "cashier"', '"pos.c
 check("shared_helper_validates_pos_sales", includesAll(posShared, ["createPosSaleSchema", "preparePosSaleItems"]));
 check(
   "product_search_is_limited",
-  includesAll(posProducts, ["take: limit * 2", "Math.min(Math.max(Math.trunc(parsed), 1), 50)"]),
+  includesAll(posProducts, ["take: limit + 1", "nextCursor", "hasMore", "Math.min(Math.max(Math.trunc(parsed), 1), 50)"]),
 );
 check(
   "sale_creation_is_atomic",

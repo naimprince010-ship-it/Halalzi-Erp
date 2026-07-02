@@ -29,6 +29,7 @@
     "verify:hal137": "node scripts/hal137-quotation-invoice-verification.mjs",
     "verify:hal141": "node scripts/hal141-finance-cash-bank-expense-verification.mjs",
     "verify:hal143": "node scripts/hal143-purchase-approval-verification.mjs",
+    "verify:hal145:pos-receipt": "node scripts/hal145-pos-receipt-print-verification.mjs",
     "verify:hal147": "node scripts/hal147-pos-api-foundation-verification.mjs",
     "verify:hal148": "node scripts/hal148-pos-dashboard-ui-verification.mjs",
     "verify:hal148:performance": "node scripts/hal148-pos-search-performance-verification.mjs",

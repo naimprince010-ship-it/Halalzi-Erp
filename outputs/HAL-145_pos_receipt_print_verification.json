@@ -1,0 +1,43 @@
+{
+  "issue": "HAL-145",
+  "title": "POS receipt and print polish",
+  "generatedAt": "2026-07-02T06:50:56.127Z",
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "receipt_route_is_permissioned_and_tenant_scoped",
+      "passed": true,
+      "details": "Receipt access must require receipt permission and company scope."
+    },
+    {
+      "name": "receipt_route_is_no_store_html",
+      "passed": true,
+      "details": "Receipt response should be printable HTML and not cache private transaction data."
+    },
+    {
+      "name": "receipt_includes_customer_cashier_payment_and_totals",
+      "passed": true,
+      "details": "Receipt must include the visible fields a cashier/customer expects."
+    },
+    {
+      "name": "receipt_includes_line_items_without_internal_ids",
+      "passed": true,
+      "details": "Receipt should show item details without exposing internal relation IDs."
+    },
+    {
+      "name": "shared_renderer_supports_receipt_polish",
+      "passed": true,
+      "details": "Shared print renderer should support receipt labels, tendered/change rows, footer text, and escaped output."
+    },
+    {
+      "name": "dashboard_exposes_receipt_links_only_with_permission",
+      "passed": true,
+      "details": "POS dashboard receipt links should stay permission-aware and open print pages in a separate tab."
+    },
+    {
+      "name": "package_exposes_hal145_verifier",
+      "passed": true,
+      "details": "HAL-145 verification must be runnable from npm scripts."
+    }
+  ]
+}

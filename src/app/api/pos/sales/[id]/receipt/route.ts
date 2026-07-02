@@ -5,6 +5,13 @@ import { renderPrintableDocument } from "@/lib/print/document-html";
 import { requirePermission } from "@/lib/rbac/guards";
 import { companyScope } from "@/lib/rbac/tenant-scope";
 
+function statusLabel(value: string) {
+  return value
+    .split("_")
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const currentUser = await requirePermission("pos.receipts.print");
@@ -67,16 +74,19 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     const html = renderPrintableDocument({
       title: "POS Receipt",
       documentNumber: sale.saleNumber,
+      documentNumberLabel: "Receipt number",
       companyName: sale.company.name,
       partyLabel: "Customer",
       partyName: sale.customerNameSnapshot ?? "Walk-in customer",
       partyContact: sale.customerPhoneSnapshot,
-      status: sale.status,
+      status: statusLabel(sale.status),
       createdAt: sale.completedAt,
       updatedAt: sale.updatedAt,
       subtotal: Number(sale.subtotal),
       discountAmount: Number(sale.discountAmount),
       totalAmount: Number(sale.totalAmount),
+      tenderedAmount: Number(sale.paidAmount),
+      changeAmount: Number(sale.changeAmount),
       unitAmountLabel: "Unit price",
       lines: sale.items.map((item) => ({
         sku: item.productSkuSnapshot,
@@ -86,13 +96,13 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
         lineTotal: Number(item.lineTotal),
       })),
       meta: [
-        { label: "Payment method", value: sale.paymentMethod },
+        { label: "Payment method", value: statusLabel(sale.paymentMethod) },
         { label: "Payment account", value: sale.paymentAccount?.name },
-        { label: "Paid", value: String(Number(sale.paidAmount)) },
-        { label: "Change", value: String(Number(sale.changeAmount)) },
         { label: "Cashier", value: sale.cashierUser?.name ?? sale.cashierUser?.email },
+        { label: "Completed", value: sale.completedAt.toISOString() },
       ],
       notes: "Thank you for your purchase.",
+      footerText: "Goods sold are subject to store return policy. Keep this receipt for your records.",
     });
 
     return new NextResponse(html, {
