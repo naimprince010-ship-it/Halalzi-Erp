@@ -132,6 +132,11 @@ enum PosSaleStatus {
   cancelled
 }
 
+enum PosSessionStatus {
+  open
+  closed
+}
+
 enum StockLedgerEntryType {
   opening_balance
   manual_adjustment
@@ -221,6 +226,7 @@ model Company {
   salesInvoices      SalesInvoice[]
   salesOrders        SalesOrder[]
   posSales           PosSale[]
+  posSessions        PosSession[]
   vendors            Vendor[]
   purchaseOrders     PurchaseOrder[]
   financeAccounts    FinanceAccount[]
@@ -337,6 +343,7 @@ model PosSale {
   changeAmount          Decimal              @default(0) @db.Decimal(12, 2)
   paymentMethod         FinancePaymentMethod @default(cash)
   paymentAccountId      String?
+  posSessionId          String?
   salesOrderId          String?
   receivableId          String?
   journalEntryId        String?
@@ -349,6 +356,7 @@ model PosSale {
   company        Company         @relation(fields: [companyId], references: [id])
   cashierUser    User?           @relation("PosSaleCashier", fields: [cashierUserId], references: [id], onDelete: SetNull)
   paymentAccount FinanceAccount? @relation("PosSalePaymentAccount", fields: [paymentAccountId], references: [id], onDelete: SetNull)
+  posSession     PosSession?     @relation(fields: [posSessionId], references: [id], onDelete: SetNull)
   items          PosSaleItem[]
 
   @@unique([companyId, saleNumber])
@@ -357,6 +365,35 @@ model PosSale {
   @@index([companyId, completedAt])
   @@index([cashierUserId])
   @@index([paymentAccountId])
+  @@index([posSessionId])
+}
+
+model PosSession {
+  id           String           @id @default(cuid())
+  companyId    String
+  cashierUserId String
+  counterName  String?
+  status       PosSessionStatus @default(open)
+  openingFloat Decimal          @default(0) @db.Decimal(12, 2)
+  closingCash  Decimal?         @db.Decimal(12, 2)
+  expectedCash Decimal?         @db.Decimal(12, 2)
+  variance     Decimal?         @db.Decimal(12, 2)
+  openedAt     DateTime         @default(now())
+  closedAt     DateTime?
+  note         String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  company     Company   @relation(fields: [companyId], references: [id])
+  cashierUser User      @relation("PosSessionCashier", fields: [cashierUserId], references: [id])
+  sales       PosSale[]
+
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([cashierUserId])
+  @@index([companyId, cashierUserId, status])
+  @@index([openedAt])
+  @@index([closedAt])
 }
 
 model PosSaleItem {
@@ -512,6 +549,7 @@ model User {
   createdJournalReversals   JournalReversal[]        @relation("JournalReversalCreatedBy")
   createdStockLedgerEntries StockLedgerEntry[]
   cashierPosSales           PosSale[]                @relation("PosSaleCashier")
+  cashierPosSessions        PosSession[]             @relation("PosSessionCashier")
   submittedPurchaseOrders   PurchaseOrder[]          @relation("PurchaseOrderSubmittedBy")
   approvedPurchaseOrders    PurchaseOrder[]          @relation("PurchaseOrderApprovedBy")
   rejectedPurchaseOrders    PurchaseOrder[]          @relation("PurchaseOrderRejectedBy")

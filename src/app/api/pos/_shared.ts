@@ -52,6 +52,7 @@ export const safePosSaleSelect = {
   changeAmount: true,
   paymentMethod: true,
   paymentAccountId: true,
+  posSessionId: true,
   completedAt: true,
   cancelledAt: true,
   createdAt: true,

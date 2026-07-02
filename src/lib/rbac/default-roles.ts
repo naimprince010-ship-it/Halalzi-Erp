@@ -204,6 +204,8 @@ export const ROLE_TEMPLATES: {
       "pos.read",
       "pos.create",
       "pos.receipts.print",
+      "pos.sessions.read",
+      "pos.sessions.manage",
     ],
   },
   {

@@ -15,7 +15,7 @@ export async function GET() {
     const scope = companyScope(currentUser);
     const today = startOfToday();
 
-    const [todaySummary, latestSales] = await prisma.$transaction([
+    const [todaySummary, latestSales, activeSession, todaySessionSummary] = await prisma.$transaction([
       prisma.posSale.aggregate({
         where: {
           companyId: scope.companyId,
@@ -40,6 +40,34 @@ export async function GET() {
         orderBy: { completedAt: "desc" },
         take: 5,
       }),
+      prisma.posSession.findFirst({
+        where: {
+          companyId: scope.companyId,
+          cashierUserId: currentUser.user.id,
+          status: "open",
+        },
+        select: {
+          id: true,
+          counterName: true,
+          status: true,
+          openingFloat: true,
+          openedAt: true,
+        },
+        orderBy: { openedAt: "desc" },
+      }),
+      prisma.posSession.aggregate({
+        where: {
+          companyId: scope.companyId,
+          openedAt: { gte: today },
+        },
+        _count: { id: true },
+        _sum: {
+          openingFloat: true,
+          closingCash: true,
+          expectedCash: true,
+          variance: true,
+        },
+      }),
     ]);
 
     return NextResponse.json({
@@ -47,7 +75,13 @@ export async function GET() {
         today: {
           saleCount: todaySummary._count.id,
           totalAmount: todaySummary._sum.totalAmount ?? 0,
+          sessionCount: todaySessionSummary._count.id,
+          openingFloat: todaySessionSummary._sum.openingFloat ?? 0,
+          closingCash: todaySessionSummary._sum.closingCash ?? 0,
+          expectedCash: todaySessionSummary._sum.expectedCash ?? 0,
+          variance: todaySessionSummary._sum.variance ?? 0,
         },
+        activeSession,
         latestSales,
       },
     });

@@ -1,0 +1,58 @@
+{
+  "issue": "HAL-146",
+  "title": "POS cashier role and session hardening",
+  "generatedAt": "2026-07-02T07:04:31.083Z",
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "schema_has_pos_session_model",
+      "passed": true,
+      "details": "Schema should persist POS sessions, cash closeout values, and sale linkage."
+    },
+    {
+      "name": "migration_creates_pos_sessions",
+      "passed": true,
+      "details": "Migration should add POS session table, indexes, and sale relation."
+    },
+    {
+      "name": "cashier_role_is_minimum_but_session_ready",
+      "passed": true,
+      "details": "Cashier should be able to sell, print, and manage own POS sessions without broader admin/finance/inventory powers."
+    },
+    {
+      "name": "session_open_route_is_guarded_and_audited",
+      "passed": true,
+      "details": "Opening a session should require session permission, block duplicate open sessions, and audit the action."
+    },
+    {
+      "name": "session_close_route_calculates_cash_variance",
+      "passed": true,
+      "details": "Closing a session should be own-session scoped and calculate expected cash and variance."
+    },
+    {
+      "name": "pos_sales_attach_to_open_session",
+      "passed": true,
+      "details": "POS sales should link to the cashier's open session when one exists."
+    },
+    {
+      "name": "summary_includes_active_session_and_daily_cash",
+      "passed": true,
+      "details": "POS summary should expose current session and daily cash closeout values."
+    },
+    {
+      "name": "dashboard_exposes_session_controls",
+      "passed": true,
+      "details": "Dashboard should show session status and open/close controls for permitted cashiers."
+    },
+    {
+      "name": "session_styles_present",
+      "passed": true,
+      "details": "Session panel should have stable dashboard styling."
+    },
+    {
+      "name": "package_exposes_hal146_verifier",
+      "passed": true,
+      "details": "HAL-146 verification must be runnable from npm scripts."
+    }
+  ]
+}

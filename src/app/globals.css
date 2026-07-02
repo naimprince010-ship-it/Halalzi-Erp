@@ -1883,6 +1883,7 @@ button {
 
 .pos-product-panel,
 .pos-cart-panel,
+.pos-session-panel,
 .pos-recent-panel {
   background: #fff;
   border: 1px solid var(--border);
@@ -1890,6 +1891,22 @@ button {
   display: grid;
   gap: 14px;
   padding: 18px;
+}
+
+.pos-session-panel {
+  align-items: end;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.pos-session-actions {
+  align-items: end;
+  display: flex;
+  gap: 10px;
+}
+
+.pos-session-actions .field {
+  min-width: 150px;
 }
 
 .pos-search-field input {
@@ -2059,6 +2076,7 @@ button {
   .finance-payment-row,
   .finance-report-row,
   .pos-layout,
+  .pos-session-panel,
   .pos-recent-row {
     grid-template-columns: 1fr 1fr;
   }
@@ -2083,11 +2101,13 @@ button {
   .pos-cart-row,
   .pos-payment-grid,
   .pos-total-box,
+  .pos-session-panel,
   .pos-recent-row {
     grid-template-columns: 1fr;
   }
 
-  .pos-cart-actions {
+  .pos-cart-actions,
+  .pos-session-actions {
     align-items: stretch;
     flex-direction: column;
   }

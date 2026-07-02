@@ -41,6 +41,27 @@ type PosSale = {
   items: PosSaleItem[];
 };
 
+type PosSession = {
+  id: string;
+  counterName: string | null;
+  status: "open" | "closed";
+  openingFloat: number | string;
+  openedAt: string;
+};
+
+type PosSummary = {
+  today: {
+    saleCount: number;
+    totalAmount: number | string;
+    sessionCount: number;
+    openingFloat: number | string;
+    closingCash: number | string;
+    expectedCash: number | string;
+    variance: number | string;
+  };
+  activeSession: PosSession | null;
+};
+
 type FinanceAccount = {
   id: string;
   name: string;
@@ -138,6 +159,7 @@ export default function PosDashboardPage() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsNextCursor, setProductsNextCursor] = useState<string | null>(null);
   const [salesLoading, setSalesLoading] = useState(false);
+  const [sessionLoading, setSessionLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
   const [saleError, setSaleError] = useState<string | null>(null);
@@ -154,10 +176,15 @@ export default function PosDashboardPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [paymentAccountId, setPaymentAccountId] = useState("");
   const [lastSale, setLastSale] = useState<PosSale | null>(null);
+  const [posSummary, setPosSummary] = useState<PosSummary | null>(null);
+  const [counterName, setCounterName] = useState("");
+  const [openingFloat, setOpeningFloat] = useState("0");
+  const [closingCash, setClosingCash] = useState("");
 
   const canReadPos = currentUser?.permissions.includes("pos.read") ?? false;
   const canCreatePos = currentUser?.permissions.includes("pos.create") ?? false;
   const canPrintReceipts = currentUser?.permissions.includes("pos.receipts.print") ?? false;
+  const canManageSessions = currentUser?.permissions.includes("pos.sessions.manage") ?? false;
   const canReadFinance = currentUser?.permissions.includes("finance.read") ?? false;
 
   const visibleNav = useMemo(() => {
@@ -186,6 +213,7 @@ export default function PosDashboardPage() {
         await Promise.all([
           loadProducts("", { append: false }),
           loadRecentSales(),
+          loadPosSummary(),
           user.permissions.includes("finance.read") ? loadPaymentAccounts() : Promise.resolve(),
         ]);
       } catch {
@@ -255,6 +283,28 @@ export default function PosDashboardPage() {
     }
   }
 
+  async function loadPosSummary() {
+    setSessionLoading(true);
+
+    try {
+      const response = await fetch("/api/pos/summary", { cache: "no-store" });
+      const payload = (await response.json().catch(() => ({}))) as { data?: PosSummary } & ApiErrorPayload;
+
+      if (!response.ok) {
+        throw new Error(apiMessage(payload, "Could not load POS session summary."));
+      }
+
+      setPosSummary(payload.data ?? null);
+      if (payload.data?.activeSession) {
+        setClosingCash(String(Number(payload.data.activeSession.openingFloat) + Number(payload.data.today.totalAmount)));
+      }
+    } catch {
+      setPosSummary(null);
+    } finally {
+      setSessionLoading(false);
+    }
+  }
+
   async function loadPaymentAccounts() {
     try {
       const response = await fetch("/api/finance/accounts", { cache: "no-store" });
@@ -265,6 +315,71 @@ export default function PosDashboardPage() {
       setPaymentAccounts(accounts);
     } catch {
       setPaymentAccounts([]);
+    }
+  }
+
+  async function openPosSession(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPageError(null);
+    setSaleSuccess(null);
+    setSessionLoading(true);
+
+    try {
+      const response = await fetch("/api/pos/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          counterName: counterName.trim() || undefined,
+          openingFloat: Math.max(Number(openingFloat || 0), 0),
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as ApiErrorPayload;
+
+      if (!response.ok) {
+        throw new Error(apiMessage(payload, "Could not open POS session."));
+      }
+
+      setCounterName("");
+      setOpeningFloat("0");
+      setSaleSuccess("POS session opened.");
+      await loadPosSummary();
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "Could not open POS session.");
+    } finally {
+      setSessionLoading(false);
+    }
+  }
+
+  async function closePosSession(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const activeSession = posSummary?.activeSession;
+    if (!activeSession) return;
+
+    setPageError(null);
+    setSaleSuccess(null);
+    setSessionLoading(true);
+
+    try {
+      const response = await fetch(`/api/pos/sessions/${activeSession.id}/close`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          closingCash: Math.max(Number(closingCash || 0), 0),
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as ApiErrorPayload;
+
+      if (!response.ok) {
+        throw new Error(apiMessage(payload, "Could not close POS session."));
+      }
+
+      setClosingCash("");
+      setSaleSuccess("POS session closed.");
+      await loadPosSummary();
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "Could not close POS session.");
+    } finally {
+      setSessionLoading(false);
     }
   }
 
@@ -355,6 +470,7 @@ export default function PosDashboardPage() {
       await Promise.all([
         loadProducts(search, { append: false }),
         loadRecentSales(),
+        loadPosSummary(),
         canReadFinance ? loadPaymentAccounts() : Promise.resolve(),
       ]);
     } catch (error) {
@@ -458,6 +574,61 @@ export default function PosDashboardPage() {
                   {salesLoading ? "Refreshing..." : "Refresh sales"}
                 </button>
               </div>
+            </section>
+
+            <section className="pos-session-panel" aria-label="POS session status">
+              <div>
+                <p className="eyebrow">Cashier session</p>
+                <h2>{posSummary?.activeSession ? "Session open" : "No open session"}</h2>
+                <p>
+                  Today: {posSummary ? `${posSummary.today.saleCount} sales, ${money(posSummary.today.totalAmount)}` : "Loading summary"}
+                </p>
+                {posSummary?.activeSession ? (
+                  <p>
+                    Counter: {posSummary.activeSession.counterName ?? "Default"} - Opened {dateTime(posSummary.activeSession.openedAt)}
+                  </p>
+                ) : null}
+              </div>
+
+              {canManageSessions ? (
+                posSummary?.activeSession ? (
+                  <form className="pos-session-actions" onSubmit={closePosSession}>
+                    <label className="field">
+                      <span>Closing cash</span>
+                      <input
+                        min="0"
+                        step="0.01"
+                        type="number"
+                        value={closingCash}
+                        onChange={(event) => setClosingCash(event.target.value)}
+                      />
+                    </label>
+                    <button className="secondary-button" type="submit" disabled={sessionLoading}>
+                      {sessionLoading ? "Closing..." : "Close session"}
+                    </button>
+                  </form>
+                ) : (
+                  <form className="pos-session-actions" onSubmit={openPosSession}>
+                    <label className="field">
+                      <span>Counter</span>
+                      <input value={counterName} onChange={(event) => setCounterName(event.target.value)} placeholder="Front counter" />
+                    </label>
+                    <label className="field">
+                      <span>Opening float</span>
+                      <input
+                        min="0"
+                        step="0.01"
+                        type="number"
+                        value={openingFloat}
+                        onChange={(event) => setOpeningFloat(event.target.value)}
+                      />
+                    </label>
+                    <button className="secondary-button" type="submit" disabled={sessionLoading}>
+                      {sessionLoading ? "Opening..." : "Open session"}
+                    </button>
+                  </form>
+                )
+              ) : null}
             </section>
 
             {saleError ? <div className="form-error">{saleError}</div> : null}

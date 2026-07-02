@@ -117,6 +117,15 @@ export async function POST(request: Request) {
       }
 
       let createdSale: SafePosSale | null = null;
+      const activeSession = await tx.posSession.findFirst({
+        where: {
+          companyId: scope.companyId,
+          cashierUserId: currentUser.user.id,
+          status: "open",
+        },
+        select: { id: true },
+        orderBy: { openedAt: "desc" },
+      });
 
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
@@ -133,6 +142,7 @@ export async function POST(request: Request) {
               changeAmount,
               paymentMethod: parsed.paymentMethod,
               paymentAccountId: parsed.paymentAccountId ?? null,
+              posSessionId: activeSession?.id ?? null,
               cashierUserId: currentUser.user.id,
               items: {
                 create: preparedItems,
@@ -204,6 +214,7 @@ export async function POST(request: Request) {
         totalAmount: Number(sale.totalAmount),
         paymentMethod: sale.paymentMethod,
         paymentAccountId: sale.paymentAccountId,
+        posSessionId: sale.posSessionId,
         stockMovementCount,
       },
     });
