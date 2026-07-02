@@ -1,0 +1,55 @@
+{
+  "issue": "HAL-147",
+  "title": "POS production smoke and release signoff",
+  "generatedAt": "2026-07-02T07:29:11.555Z",
+  "baseUrl": "https://halalzi-erp.vercel.app",
+  "status": "BLOCKED_AUTH_ENV",
+  "total": 3,
+  "passed": 3,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "production pages respond",
+      "ok": true,
+      "details": {
+        "pages": [
+          {
+            "routePath": "/",
+            "status": 200,
+            "location": null
+          },
+          {
+            "routePath": "/login",
+            "status": 200,
+            "location": null
+          },
+          {
+            "routePath": "/dashboard/pos",
+            "status": 200,
+            "location": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "POS APIs reject unauthenticated access",
+      "ok": true,
+      "details": {
+        "statuses": [
+          "/api/pos/products=401",
+          "/api/pos/sales=401",
+          "/api/pos/summary=401",
+          "/api/pos/sessions=401",
+          "/api/pos/sales/not-a-real-sale/receipt=401"
+        ]
+      }
+    },
+    {
+      "name": "authenticated POS smoke skipped",
+      "ok": true,
+      "details": {
+        "reason": "Set SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD locally to run authenticated POS checks."
+      }
+    }
+  ]
+}

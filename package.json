@@ -32,6 +32,7 @@
     "verify:hal145:pos-receipt": "node scripts/hal145-pos-receipt-print-verification.mjs",
     "verify:hal146:pos-session": "node scripts/hal146-pos-cashier-session-verification.mjs",
     "verify:hal147": "node scripts/hal147-pos-api-foundation-verification.mjs",
+    "smoke:pos:prod": "node scripts/hal147-pos-production-smoke.mjs",
     "verify:hal148": "node scripts/hal148-pos-dashboard-ui-verification.mjs",
     "verify:hal148:performance": "node scripts/hal148-pos-search-performance-verification.mjs",
     "regression:pos": "node scripts/hal149-pos-stock-finance-rbac-regression.mjs",
